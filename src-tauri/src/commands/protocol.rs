@@ -42,8 +42,6 @@
 use crate::error::AppError;
 use tauri::AppHandle;
 
-const MANUAL_CHANGE_REQUIRED: &str = "manual_change_required";
-
 // ── macOS native implementation ─────────────────────────────────────
 
 #[cfg(target_os = "macos")]
@@ -853,6 +851,7 @@ pub async fn remove_as_default_protocol_client(
 ) -> Result<(), AppError> {
     #[cfg(target_os = "macos")]
     {
+        const MANUAL_CHANGE_REQUIRED: &str = "manual_change_required";
         let _ = (&app, &protocol);
         Err(AppError::Protocol(MANUAL_CHANGE_REQUIRED.into()))
     }
