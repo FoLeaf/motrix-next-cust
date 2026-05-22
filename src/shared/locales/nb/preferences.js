@@ -348,6 +348,8 @@ export default {
   'connect-timeout': 'Tilkoblingsavbrudd',
   timeout: 'Overføringsavbrudd',
   'file-allocation': 'Forhåndstildeling av fil',
+  'async-dns': 'Asynkron DNS',
+  'async-dns-hint': 'Forbedrer DNS-ytelsen, men kan feile i enkelte nettverksmiljøer.',
   'startup-behavior': 'Oppstart',
   'tray-and-dock': 'Systemstatusfeltet og Dock',
   'unit-seconds': 'sek',

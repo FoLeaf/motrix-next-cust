@@ -354,6 +354,8 @@ export default {
   'connect-timeout': "Temps d'espera de connexió",
   timeout: "Temps d'espera de transferència",
   'file-allocation': 'Preasignació de fitxer',
+  'async-dns': 'DNS asíncron',
+  'async-dns-hint': 'Millora el rendiment del DNS, però pot fallar en alguns entorns de xarxa.',
   'startup-behavior': 'Inici',
   'tray-and-dock': 'Safata i Dock',
   'unit-seconds': 'seg',

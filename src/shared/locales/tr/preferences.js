@@ -351,6 +351,8 @@ export default {
   'connect-timeout': 'Bağlantı zaman aşımı',
   timeout: 'Aktarım zaman aşımı',
   'file-allocation': 'Dosya ön tahsisi',
+  'async-dns': 'Eşzamansız DNS',
+  'async-dns-hint': 'DNS performansını artırır, ancak bazı ağ ortamlarında başarısız olabilir.',
   'startup-behavior': 'Başlangıç',
   'tray-and-dock': 'Tepsi ve Dock',
   'unit-seconds': 'sn',

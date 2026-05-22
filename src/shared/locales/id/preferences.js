@@ -351,6 +351,8 @@ export default {
   'connect-timeout': 'Batas waktu koneksi',
   timeout: 'Batas waktu transfer',
   'file-allocation': 'Pra-alokasi file',
+  'async-dns': 'DNS asinkron',
+  'async-dns-hint': 'Meningkatkan kinerja DNS, tetapi dapat gagal di beberapa lingkungan jaringan.',
   'startup-behavior': 'Mulai',
   'tray-and-dock': 'Baki & Dock',
   'unit-seconds': 'dtk',

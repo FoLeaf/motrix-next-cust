@@ -357,6 +357,8 @@ export default {
   'connect-timeout': 'Χρονικό όριο σύνδεσης',
   timeout: 'Χρονικό όριο μεταφοράς',
   'file-allocation': 'Προ-εκχώρηση αρχείου',
+  'async-dns': 'Ασύγχρονο DNS',
+  'async-dns-hint': 'Βελτιώνει την απόδοση DNS, αλλά μπορεί να αποτύχει σε ορισμένα περιβάλλοντα δικτύου.',
   'startup-behavior': 'Εκκίνηση',
   'tray-and-dock': 'Περιοχή ειδοποιήσεων & Dock',
   'unit-seconds': 'δευτ',

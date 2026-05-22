@@ -350,6 +350,8 @@ export default {
   'connect-timeout': 'Времеви лимит за свързване',
   timeout: 'Времеви лимит за трансфер',
   'file-allocation': 'Предварително разпределяне на файл',
+  'async-dns': 'Асинхронен DNS',
+  'async-dns-hint': 'Подобрява производителността на DNS, но може да се провали в някои мрежови среди.',
   'startup-behavior': 'Стартиране',
   'tray-and-dock': 'Трей и Dock',
   'unit-seconds': 'сек',

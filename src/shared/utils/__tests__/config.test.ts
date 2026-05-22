@@ -244,6 +244,7 @@ describe('filterHotReloadableKeys', () => {
       'rpc-secret': 'abc',
       'listen-port': '21301',
       'dht-listen-port': '26701',
+      'async-dns': 'false',
     }
     expect(filterHotReloadableKeys(config)).toEqual({})
   })

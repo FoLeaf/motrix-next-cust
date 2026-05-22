@@ -352,6 +352,8 @@ export default {
   'connect-timeout': 'Timeout conexiune',
   timeout: 'Timeout transfer',
   'file-allocation': 'Pre-alocare fișier',
+  'async-dns': 'DNS asincron',
+  'async-dns-hint': 'Îmbunătățește performanța DNS, dar poate eșua în unele medii de rețea.',
   'startup-behavior': 'Pornire',
   'tray-and-dock': 'Tavă și Dock',
   'unit-seconds': 'sec',

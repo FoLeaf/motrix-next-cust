@@ -357,6 +357,8 @@ export default {
   'connect-timeout': 'Tiempo de espera de conexión',
   timeout: 'Tiempo de espera de transferencia',
   'file-allocation': 'Preasignación de archivo',
+  'async-dns': 'DNS asíncrono',
+  'async-dns-hint': 'Mejora el rendimiento de DNS, pero puede fallar en algunos entornos de red.',
   'startup-behavior': 'Inicio',
   'tray-and-dock': 'Bandeja y Dock',
   'unit-seconds': 'seg',

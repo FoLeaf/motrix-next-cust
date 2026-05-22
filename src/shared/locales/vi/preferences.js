@@ -348,6 +348,8 @@ export default {
   'connect-timeout': 'Hết hạn kết nối',
   timeout: 'Hết hạn truyền tải',
   'file-allocation': 'Phân bổ trước tệp',
+  'async-dns': 'DNS bất đồng bộ',
+  'async-dns-hint': 'Cải thiện hiệu năng DNS, nhưng có thể lỗi trong một số môi trường mạng.',
   'startup-behavior': 'Khởi động',
   'tray-and-dock': 'Khay hệ thống và Dock',
   'unit-seconds': 'giây',

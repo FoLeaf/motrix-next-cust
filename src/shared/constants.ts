@@ -337,6 +337,7 @@ export const DEFAULT_APP_CONFIG = {
   connectTimeout: 10, // seconds to establish connection
   timeout: 10, // seconds for data transfer after connection
   fileAllocation: 'none', // 'none' | 'trunc' | 'prealloc' | 'falloc'
+  asyncDns: false, // default OFF for compatibility; can improve DNS performance when enabled
 
   // ── Task Sorting ─────────────────────────────────────────────
   taskSort: DEFAULT_TASK_SORT,

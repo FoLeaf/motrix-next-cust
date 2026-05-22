@@ -350,6 +350,8 @@ export default {
   'connect-timeout': "Тайм-аут з'єднання",
   timeout: 'Тайм-аут передачі',
   'file-allocation': 'Попереднє виділення файлу',
+  'async-dns': 'Асинхронний DNS',
+  'async-dns-hint': 'Покращує продуктивність DNS, але може не працювати в деяких мережевих середовищах.',
   'startup-behavior': 'Запуск',
   'tray-and-dock': 'Трей та Dock',
   'unit-seconds': 'сек',

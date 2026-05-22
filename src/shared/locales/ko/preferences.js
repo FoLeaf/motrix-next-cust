@@ -347,6 +347,8 @@ export default {
   'connect-timeout': '연결 시간 초과',
   timeout: '전송 시간 초과',
   'file-allocation': '파일 사전 할당',
+  'async-dns': '비동기 DNS',
+  'async-dns-hint': 'DNS 성능을 개선하지만 일부 네트워크 환경에서는 실패할 수 있습니다.',
   'startup-behavior': '시작',
   'tray-and-dock': '트레이 및 Dock',
   'unit-seconds': '초',

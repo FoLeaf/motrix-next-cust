@@ -346,6 +346,8 @@ export default {
   'connect-timeout': 'مهلة الاتصال',
   timeout: 'مهلة النقل',
   'file-allocation': 'تخصيص الملف المسبق',
+  'async-dns': 'DNS غير متزامن',
+  'async-dns-hint': 'يحسن أداء تحليل DNS، لكنه قد يفشل في بعض بيئات الشبكة.',
   'startup-behavior': 'التشغيل',
   'tray-and-dock': 'شريط المهام والـ Dock',
   'unit-seconds': 'ثانية',

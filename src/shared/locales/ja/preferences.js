@@ -351,6 +351,8 @@ export default {
   'connect-timeout': '接続タイムアウト',
   timeout: '転送タイムアウト',
   'file-allocation': 'ファイル事前割り当て',
+  'async-dns': '非同期 DNS',
+  'async-dns-hint': 'DNS の性能を向上させますが、一部のネットワーク環境では失敗する場合があります。',
   'startup-behavior': '起動',
   'tray-and-dock': 'トレイと Dock',
   'unit-seconds': '秒',

@@ -127,7 +127,8 @@ export const checkIsNeedRestart = (changed: Record<string, unknown> = {}): boole
 
 /**
  * Keys excluded from runtime hot-reload via aria2 `changeGlobalOption`.
- * - needRestartKeys: bound at process startup (ports, RPC secret)
+ * - needRestartKeys: bound at process startup or intentionally engine-restarted
+ *   so queued runtime work cannot keep stale behavior
  * - aria2 docs exclusions: not accepted by `changeGlobalOption`
  * - log-level: needs full app relaunch (tauri-plugin-log init), not engine restart
  */

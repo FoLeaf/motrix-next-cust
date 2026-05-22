@@ -366,6 +366,15 @@ onMounted(() => {
           style="width: 140px"
         />
       </NFormItem>
+      <NFormItem class="hinted-form-item">
+        <template #label>
+          <div class="form-label-with-hint">
+            <div>{{ t('preferences.async-dns') }}</div>
+            <div class="info-text">{{ t('preferences.async-dns-hint') }}</div>
+          </div>
+        </template>
+        <NSwitch v-model:value="form.asyncDns" />
+      </NFormItem>
     </NForm>
     <PreferenceActionBar :is-dirty="isDirty" @save="handleSave" @discard="handleReset" @restart="handleManualRestart" />
   </div>

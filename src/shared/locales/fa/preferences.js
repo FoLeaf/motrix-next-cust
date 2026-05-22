@@ -349,6 +349,8 @@ export default {
   'connect-timeout': 'مهلت اتصال',
   timeout: 'مهلت انتقال',
   'file-allocation': 'پیش‌تخصیص فایل',
+  'async-dns': 'DNS ناهمگام',
+  'async-dns-hint': 'عملکرد DNS را بهبود می‌دهد، اما ممکن است در برخی محیط‌های شبکه ناموفق باشد.',
   'startup-behavior': 'راه‌اندازی',
   'tray-and-dock': 'سینی و Dock',
   'unit-seconds': 'ثانیه',

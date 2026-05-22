@@ -352,6 +352,8 @@ export default {
   'connect-timeout': 'Verbindingstime-out',
   timeout: 'Overdrachtstime-out',
   'file-allocation': 'Bestandsvoorallocatie',
+  'async-dns': 'Asynchrone DNS',
+  'async-dns-hint': 'Verbetert DNS-prestaties, maar kan in sommige netwerkomgevingen mislukken.',
   'startup-behavior': 'Opstarten',
   'tray-and-dock': 'Systeemvak en Dock',
   'unit-seconds': 'sec',

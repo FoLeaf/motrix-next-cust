@@ -339,6 +339,8 @@ export default {
   'connect-timeout': '连接超时',
   timeout: '传输超时',
   'file-allocation': '文件预分配',
+  'async-dns': '异步 DNS',
+  'async-dns-hint': '提升 DNS 解析性能，但部分网络环境可能无法下载。',
   'startup-behavior': '启动',
   'tray-and-dock': '托盘与 Dock',
   'unit-seconds': '秒',

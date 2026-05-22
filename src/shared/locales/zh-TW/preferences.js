@@ -340,6 +340,8 @@ export default {
   'connect-timeout': '連線逾時',
   timeout: '傳輸逾時',
   'file-allocation': '檔案預分配',
+  'async-dns': '非同步 DNS',
+  'async-dns-hint': '提升 DNS 解析效能，但部分網路環境可能無法下載。',
   'startup-behavior': '啟動',
   'tray-and-dock': '系統匣與 Dock',
   'unit-seconds': '秒',

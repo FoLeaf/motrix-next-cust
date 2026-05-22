@@ -350,6 +350,8 @@ export default {
   'connect-timeout': 'Kapcsolódási időtúllépés',
   timeout: 'Átviteli időtúllépés',
   'file-allocation': 'Fájl előfoglalás',
+  'async-dns': 'Aszinkron DNS',
+  'async-dns-hint': 'Javítja a DNS teljesítményét, de egyes hálózati környezetekben hibázhat.',
   'startup-behavior': 'Indítás',
   'tray-and-dock': 'Tálca és Dock',
   'unit-seconds': 'mp',

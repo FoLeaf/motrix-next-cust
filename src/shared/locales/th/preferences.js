@@ -345,6 +345,8 @@ export default {
   'connect-timeout': 'หมดเวลาเชื่อมต่อ',
   timeout: 'หมดเวลาถ่ายโอน',
   'file-allocation': 'จัดสรรไฟล์ล่วงหน้า',
+  'async-dns': 'DNS แบบอะซิงโครนัส',
+  'async-dns-hint': 'ช่วยเพิ่มประสิทธิภาพ DNS แต่อาจล้มเหลวในบางสภาพแวดล้อมเครือข่าย',
   'startup-behavior': 'การเริ่มต้น',
   'tray-and-dock': 'ถาดและ Dock',
   'unit-seconds': 'วินาที',

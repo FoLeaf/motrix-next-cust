@@ -351,6 +351,8 @@ export default {
   'connect-timeout': 'Limit czasu połączenia',
   timeout: 'Limit czasu transferu',
   'file-allocation': 'Wstępna alokacja pliku',
+  'async-dns': 'Asynchroniczny DNS',
+  'async-dns-hint': 'Poprawia wydajność DNS, ale może zawieść w niektórych środowiskach sieciowych.',
   'startup-behavior': 'Uruchamianie',
   'tray-and-dock': 'Zasobnik i Dock',
   'unit-seconds': 'sek',

@@ -354,6 +354,8 @@ export default {
   'connect-timeout': 'Verbindungs-Zeitlimit',
   timeout: 'Übertragungs-Zeitlimit',
   'file-allocation': 'Datei-Vorabzuweisung',
+  'async-dns': 'Asynchrones DNS',
+  'async-dns-hint': 'Verbessert die DNS-Leistung, kann aber in manchen Netzwerkumgebungen fehlschlagen.',
   'startup-behavior': 'Autostart',
   'tray-and-dock': 'Taskleiste & Dock',
   'unit-seconds': 'Sek',
