@@ -303,6 +303,13 @@ mod tests {
     }
 
     #[test]
+    fn bundled_conf_does_not_seed_unverified_bt_files() {
+        const BUNDLED_CONF: &str = include_str!("../../binaries/aria2.conf");
+        assert!(BUNDLED_CONF.contains("bt-seed-unverified=false"));
+        assert!(!BUNDLED_CONF.contains("bt-seed-unverified=true"));
+    }
+
+    #[test]
     fn build_args_no_rpc_enable_with_conf() {
         let args = build_start_args(&json!({}), Some("/etc/aria2.conf"), "/tmp/s.session", false);
         assert!(!args.iter().any(|a| a.contains("enable-rpc")));
