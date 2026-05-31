@@ -1,6 +1,11 @@
 <div align="center">
   <img src="src/assets/logo.png" alt="Motrix Next" width="128" height="128" style="border-radius: 24px;" />
-  <h1>Motrix Next</h1>
+  <h1>
+    Motrix Next<br />
+    <a href="https://trendshift.io/repositories/24525">
+      <img src="https://trendshift.io/api/badge/repositories/24525" alt="AnInsomniacy/motrix-next on Trendshift" width="250" height="55" />
+    </a>
+  </h1>
   <p>A full-featured download manager — rebuilt from the ground up.</p>
 
 [![GitHub release](https://img.shields.io/github/v/release/AnInsomniacy/motrix-next.svg)](https://github.com/AnInsomniacy/motrix-next/releases)
@@ -108,6 +113,13 @@ The `.app.tar.gz` macOS artifacts are published for the Tauri updater and Homebr
 > If macOS says the app is **"damaged and can't be opened"**, see the [FAQ below](#faq).
 
 ### Windows
+
+**Scoop (recommended):**
+
+```bash
+scoop bucket add extras
+scoop install extras/motrix-next
+```
 
 Download the installer from [Releases](https://github.com/AnInsomniacy/motrix-next/releases):
 
