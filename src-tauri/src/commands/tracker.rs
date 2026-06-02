@@ -118,9 +118,10 @@ pub async fn fetch_tracker_sources(
     log::info!("TrackerSync: fetching from {} source(s)", urls.len());
 
     let builder = reqwest::Client::builder().timeout(std::time::Duration::from_secs(30));
-    let client = crate::commands::http_client::apply_explicit_proxy(builder, &proxy_server, "TrackerSync")
-        .build()
-        .map_err(|e| AppError::Io(format!("failed to build HTTP client: {}", e)))?;
+    let client =
+        crate::commands::http_client::apply_explicit_proxy(builder, &proxy_server, "TrackerSync")
+            .build()
+            .map_err(|e| AppError::Io(format!("failed to build HTTP client: {}", e)))?;
 
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

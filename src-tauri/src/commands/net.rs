@@ -53,9 +53,10 @@ pub async fn resolve_filename(
     let builder = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(HEAD_TIMEOUT_SECS))
         .redirect(reqwest::redirect::Policy::limited(5));
-    let client = crate::commands::http_client::apply_explicit_proxy(builder, &proxy, "resolve_filename")
-        .build()
-        .map_err(|e| AppError::Io(format!("HEAD client init failed: {e}")))?;
+    let client =
+        crate::commands::http_client::apply_explicit_proxy(builder, &proxy, "resolve_filename")
+            .build()
+            .map_err(|e| AppError::Io(format!("HEAD client init failed: {e}")))?;
 
     let req =
         apply_download_request_headers(client.head(&url), referer.as_deref(), cookie.as_deref());
@@ -224,9 +225,10 @@ pub async fn fetch_remote_bytes(
     let builder = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
         .redirect(reqwest::redirect::Policy::limited(5));
-    let client = crate::commands::http_client::apply_explicit_proxy(builder, &proxy, "fetch_remote_bytes")
-        .build()
-        .map_err(|e| AppError::Io(format!("GET client init failed: {e}")))?;
+    let client =
+        crate::commands::http_client::apply_explicit_proxy(builder, &proxy, "fetch_remote_bytes")
+            .build()
+            .map_err(|e| AppError::Io(format!("GET client init failed: {e}")))?;
 
     let req = apply_remote_request_headers(
         client.get(&url),
