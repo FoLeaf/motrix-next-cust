@@ -33,11 +33,11 @@ body:
     attributes:
       label: Issue Source
       description: |
-        Select Motrix Next app only for desktop-app bugs.
-        Browser extension issues must be filed in:
+        Select Motrix Next app only for desktop-app bugs.<br>
+        Browser extension issues must be filed in:<br>
         https://github.com/AnInsomniacy/motrix-next-extension
 
-        Aria2 Next engine issues must be filed in:
+        Aria2 Next engine issues must be filed in:<br>
         https://github.com/AnInsomniacy/aria2-next
 
         Misfiled issues may be closed here.
