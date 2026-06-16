@@ -179,7 +179,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'پیکربندی موتور',
   'allow-remote-access': 'اجازه دسترسی از راه دور',
-  'remote-access-secret-required': 'دسترسی از راه دور به کلید RPC و کلید API افزونه نیاز دارد',
   'temp-files-dir': 'Temporary Files Directory',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'تنظیمات کارخانه بازیابی شود؟',

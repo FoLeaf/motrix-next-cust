@@ -176,9 +176,6 @@ export function transformAdvancedForStore(f: AdvancedForm): Record<string, unkno
  * Returns null if valid, or an i18n error key if invalid.
  */
 export function validateAdvancedForm(f: AdvancedForm): string | null {
-  if (f.allowRemoteAccess && (!f.rpcSecret || !f.extensionApiSecret)) {
-    return 'preferences.remote-access-secret-required'
-  }
   if (f.proxy.mode === 'manual' && f.proxy.server) {
     if (!isValidAria2ProxyUrl(f.proxy.server)) {
       return UNSUPPORTED_PROXY_SCHEME_RE.test(f.proxy.server.trim())

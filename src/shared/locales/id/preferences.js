@@ -179,7 +179,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'Konfigurasi Mesin',
   'allow-remote-access': 'Izinkan Akses Jarak Jauh',
-  'remote-access-secret-required': 'Akses jarak jauh memerlukan RPC Secret dan Extension API Secret',
   'temp-files-dir': 'Direktori File Sementara',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'Pulihkan pengaturan pabrik?',

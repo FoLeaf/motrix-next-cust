@@ -174,7 +174,6 @@ export default {
   'ua-delete': '删除',
   'aria2-conf-path': '引擎配置文件',
   'allow-remote-access': '允许远程访问',
-  'remote-access-secret-required': '远程访问需要同时设置 RPC 密钥和扩展 API 密钥',
   'temp-files-dir': '临时文件目录',
   'factory-reset': '删除配置并重置',
   'factory-reset-confirm': '确定要恢复出厂设置吗？',

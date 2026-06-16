@@ -436,13 +436,9 @@ describe('validateAdvancedForm', () => {
     expect(validateAdvancedForm({ ...validForm, rpcSecret: '' })).toBeNull()
   })
 
-  it('requires both secrets when remote access is enabled', () => {
-    expect(validateAdvancedForm({ ...validForm, allowRemoteAccess: true, rpcSecret: '' })).toBe(
-      'preferences.remote-access-secret-required',
-    )
-    expect(validateAdvancedForm({ ...validForm, allowRemoteAccess: true, extensionApiSecret: '' })).toBe(
-      'preferences.remote-access-secret-required',
-    )
+  it('allows remote access with empty secrets', () => {
+    expect(validateAdvancedForm({ ...validForm, allowRemoteAccess: true, rpcSecret: '' })).toBeNull()
+    expect(validateAdvancedForm({ ...validForm, allowRemoteAccess: true, extensionApiSecret: '' })).toBeNull()
   })
 
   it('returns null for valid proxy URL in manual mode', () => {

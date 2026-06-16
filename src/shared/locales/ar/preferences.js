@@ -175,7 +175,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'ملف تهيئة المحرك',
   'allow-remote-access': 'السماح بالوصول عن بُعد',
-  'remote-access-secret-required': 'يتطلب الوصول عن بُعد تعيين سر RPC وسر API للإضافة',
   'temp-files-dir': 'Temporary Files Directory',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'استعادة إعدادات المصنع؟',

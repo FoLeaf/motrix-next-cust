@@ -176,7 +176,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': '엔진 설정',
   'allow-remote-access': '원격 접근 허용',
-  'remote-access-secret-required': '원격 접근에는 RPC 비밀키와 확장 프로그램 API 비밀키가 모두 필요합니다',
   'temp-files-dir': '임시 파일 디렉터리',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': '초기 설정으로 복원하시겠습니까?',

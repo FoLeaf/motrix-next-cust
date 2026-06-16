@@ -181,7 +181,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'Configuració del motor',
   'allow-remote-access': "Permet l'accés remot",
-  'remote-access-secret-required': "L'accés remot requereix el secret RPC i el secret de l'API de l'extensió",
   'temp-files-dir': 'Directori de fitxers temporals',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'Restaurar els valors de fàbrica?',

@@ -180,7 +180,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'Motor konfiguráció',
   'allow-remote-access': 'Távoli hozzáférés engedélyezése',
-  'remote-access-secret-required': 'A távoli hozzáféréshez RPC kulcs és bővítmény API kulcs is szükséges',
   'temp-files-dir': 'Ideiglenes fájlok mappája',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'Visszaállítja a gyári beállításokat?',

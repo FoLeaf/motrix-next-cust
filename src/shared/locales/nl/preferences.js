@@ -179,7 +179,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'Engine-configuratie',
   'allow-remote-access': 'Externe toegang toestaan',
-  'remote-access-secret-required': 'Externe toegang vereist zowel RPC-sleutel als extensie-API-sleutel',
   'temp-files-dir': 'Map voor tijdelijke bestanden',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'Fabrieksinstellingen herstellen?',

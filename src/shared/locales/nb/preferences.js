@@ -177,7 +177,6 @@ export default {
   'ua-delete': 'Delete',
   'aria2-conf-path': 'Motorkonfigurasjon',
   'allow-remote-access': 'Tillat ekstern tilgang',
-  'remote-access-secret-required': 'Ekstern tilgang krever både RPC-nøkkel og API-nøkkel for utvidelse',
   'temp-files-dir': 'Mappe for midlertidige filer',
   'factory-reset': 'Delete Config and Reset',
   'factory-reset-confirm': 'Gjenopprette fabrikkinnstillinger?',
