@@ -1,6 +1,6 @@
 [package]
 name = "motrix-next"
-version = "3.9.6-beta.5"
+version = "3.9.6-beta.6"
 description = "A full-featured download manager"
 authors = ["AnInsomniacy"]
 edition = "2021"
