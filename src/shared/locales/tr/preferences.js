@@ -349,8 +349,10 @@ export default {
   'color-scheme-glacier': 'Buzul',
   'color-scheme-evergreen': 'Her daim yeşil',
   'color-scheme-graphite': 'Grafit',
+  'color-scheme-custom': 'Özel',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Renk şeması {name} olarak değiştirildi',
+  'custom-color-scheme': 'Özel renk',
+  'color-scheme-switched': '{name} renk şemasına geçildi',
   'open-settings': 'Ayarlara git',
   'protocol-unregister-manual-required':
     'Sistem kısıtlamaları nedeniyle bu ilişkilendirme uygulama içinde kaldırılamaz. Lütfen elle değiştirin.',

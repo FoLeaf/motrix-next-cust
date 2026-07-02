@@ -348,8 +348,10 @@ export default {
   'color-scheme-glacier': 'Ледник',
   'color-scheme-evergreen': 'Вечнозелёный',
   'color-scheme-graphite': 'Графит',
+  'color-scheme-custom': 'Пользовательская',
   'color-scheme-sakura': 'Сакура',
-  'color-scheme-switched': 'Цветовая схема изменена на {name}',
+  'custom-color-scheme': 'Пользовательский цвет',
+  'color-scheme-switched': 'Переключено на цветовую схему {name}',
   'open-settings': 'Перейти в настройки',
   'protocol-unregister-manual-required':
     'Из-за системных ограничений эту связь нельзя удалить в приложении. Измените её вручную.',

@@ -355,8 +355,10 @@ export default {
   'color-scheme-glacier': 'Glacier',
   'color-scheme-evergreen': 'Sempervirent',
   'color-scheme-graphite': 'Graphite',
+  'color-scheme-custom': 'Personnalisé',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Schéma de couleurs changé pour {name}',
+  'custom-color-scheme': 'Couleur personnalisée',
+  'color-scheme-switched': 'Schéma de couleurs {name} appliqué',
   'open-settings': 'Aller aux paramètres',
   'protocol-unregister-manual-required':
     'En raison des restrictions du système, cette association ne peut pas être supprimée dans l’application. Veuillez la modifier manuellement.',

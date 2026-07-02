@@ -350,8 +350,10 @@ export default {
   'color-scheme-glacier': 'Gletsjer',
   'color-scheme-evergreen': 'Immergroen',
   'color-scheme-graphite': 'Grafiet',
+  'color-scheme-custom': 'Aangepast',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Kleurenschema gewijzigd naar {name}',
+  'custom-color-scheme': 'Aangepaste kleur',
+  'color-scheme-switched': 'Overgeschakeld naar kleurenschema {name}',
   'open-settings': 'Ga naar instellingen',
   'protocol-unregister-manual-required':
     'Door systeembeperkingen kan deze koppeling niet in de app worden verwijderd. Wijzig dit handmatig.',

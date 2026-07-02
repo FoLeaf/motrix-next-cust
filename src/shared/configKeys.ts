@@ -18,6 +18,7 @@ const userKeys = [
   'connect-timeout',
   'cookie',
   'custom-tracker-urls',
+  'custom-color-scheme',
   'clipboard',
   'clear-completed-on-exit',
   'color-scheme',

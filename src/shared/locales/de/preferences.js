@@ -350,8 +350,10 @@ export default {
   'color-scheme-glacier': 'Gletscher',
   'color-scheme-evergreen': 'Immergrün',
   'color-scheme-graphite': 'Graphit',
+  'color-scheme-custom': 'Benutzerdefiniert',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Farbschema auf {name} umgestellt',
+  'custom-color-scheme': 'Benutzerdefinierte Farbe',
+  'color-scheme-switched': 'Zu Farbschema {name} gewechselt',
   'open-settings': 'Zu den Einstellungen',
   'protocol-unregister-manual-required':
     'Aufgrund von Systembeschränkungen kann diese Zuordnung nicht in der App entfernt werden. Bitte manuell ändern.',

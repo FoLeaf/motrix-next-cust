@@ -349,8 +349,10 @@ export default {
   'color-scheme-glacier': 'Ghețar',
   'color-scheme-evergreen': 'Veșnic verde',
   'color-scheme-graphite': 'Grafit',
+  'color-scheme-custom': 'Personalizat',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Schema de culori schimbată la {name}',
+  'custom-color-scheme': 'Culoare personalizată',
+  'color-scheme-switched': 'S-a schimbat la schema de culori {name}',
   'open-settings': 'Mergi la Setări',
   'protocol-unregister-manual-required':
     'Din cauza restricțiilor sistemului, această asociere nu poate fi eliminată din aplicație. Modificați-o manual.',

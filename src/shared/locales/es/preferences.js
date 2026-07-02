@@ -355,7 +355,9 @@ export default {
   'color-scheme-glacier': 'Glaciar',
   'color-scheme-evergreen': 'Siempreverde',
   'color-scheme-graphite': 'Grafito',
+  'color-scheme-custom': 'Personalizado',
   'color-scheme-sakura': 'Sakura',
+  'custom-color-scheme': 'Color personalizado',
   'color-scheme-switched': 'Cambiado al esquema de colores {name}',
   'open-settings': 'Ir a Configuración',
   'protocol-unregister-manual-required':

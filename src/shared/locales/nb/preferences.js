@@ -347,7 +347,9 @@ export default {
   'color-scheme-glacier': 'Isbre',
   'color-scheme-evergreen': 'Eviggrønn',
   'color-scheme-graphite': 'Grafitt',
+  'color-scheme-custom': 'Egendefinert',
   'color-scheme-sakura': 'Sakura',
+  'custom-color-scheme': 'Egendefinert farge',
   'color-scheme-switched': 'Byttet til fargevalget {name}',
   'open-settings': 'Gå til innstillinger',
   'protocol-unregister-manual-required':

@@ -349,8 +349,10 @@ export default {
   'color-scheme-glacier': 'Gleccser',
   'color-scheme-evergreen': 'Örökzöld',
   'color-scheme-graphite': 'Grafit',
+  'color-scheme-custom': 'Egyéni',
   'color-scheme-sakura': 'Szakura',
-  'color-scheme-switched': 'Színséma átváltva: {name}',
+  'custom-color-scheme': 'Egyéni szín',
+  'color-scheme-switched': 'Átváltva a(z) {name} színsémára',
   'open-settings': 'Beállítások megnyitása',
   'protocol-unregister-manual-required':
     'Rendszerkorlátozás miatt ez a társítás nem távolítható el az alkalmazásban. Módosítsa kézzel.',

@@ -13,10 +13,11 @@
  * visible during the brief window before JS hydration completes.
  */
 import { computed, watchEffect } from 'vue'
-import { argbFromHex, hexFromArgb, themeFromSourceColor } from '@material/material-color-utilities'
+import { hexFromArgb } from '@material/material-color-utilities'
 import { usePreferenceStore } from '@/stores/preference'
 import { useTheme } from '@/composables/useTheme'
-import { COLOR_SCHEMES, type ColorSchemeDefinition } from '@shared/constants'
+import { type ColorSchemeDefinition } from '@shared/constants'
+import { buildColorSchemeTheme, resolveColorScheme } from '@shared/utils/colorScheme'
 import type { GlobalThemeOverrides } from 'naive-ui'
 
 /**
@@ -74,19 +75,16 @@ const SURFACE_CSS_MAP: Record<string, string> = {
   surfaceContainerHighest: '--m3-surface-container-highest',
 }
 
-/** Resolve the current scheme definition from the store, falling back to amber. */
-function resolveScheme(id: string | undefined): ColorSchemeDefinition {
-  return COLOR_SCHEMES.find((s) => s.id === id) || COLOR_SCHEMES[0]
-}
-
 export function useColorScheme() {
   const preferenceStore = usePreferenceStore()
   const { isDark } = useTheme()
 
-  const currentScheme = computed<ColorSchemeDefinition>(() => resolveScheme(preferenceStore.config.colorScheme))
+  const currentScheme = computed<ColorSchemeDefinition>(() =>
+    resolveColorScheme(preferenceStore.config.colorScheme, preferenceStore.config.customColorScheme),
+  )
 
   /** Full MCU theme object — cached by Vue's computed until seed changes. */
-  const m3Theme = computed(() => themeFromSourceColor(argbFromHex(currentScheme.value.seed)))
+  const m3Theme = computed(() => buildColorSchemeTheme(currentScheme.value))
 
   /** The active M3 scheme (light or dark) based on current theme mode. */
   const activeScheme = computed(() => (isDark.value ? m3Theme.value.schemes.dark : m3Theme.value.schemes.light))

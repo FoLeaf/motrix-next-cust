@@ -1,6 +1,5 @@
 /** @fileoverview Centralized AppConfig hydration, migration, and repair. */
 import {
-  COLOR_SCHEMES,
   DEFAULT_APP_CONFIG,
   FILE_ALLOCATION_OPTIONS,
   APP_LOG_LEVELS,
@@ -8,6 +7,7 @@ import {
   PROXY_SCOPE_OPTIONS,
   UPDATE_CHANNELS,
 } from '@shared/constants'
+import { getAllowedColorSchemeIds, normalizeCustomColorScheme } from '@shared/utils/colorSchemeConfig'
 import { runMigrations, type MigrationResult } from '@shared/utils/configMigration'
 import { normalizeProxyMode } from '@shared/utils/proxyPolicy'
 import type { AppConfig, ClipboardConfig, PortConflictRecoveryConfig, ProxyConfig } from '@shared/types'
@@ -188,13 +188,10 @@ function normalizeTaskManualOrder(value: unknown, repairs: string[]): TaskManual
 function normalizeScalarValues(config: Record<string, unknown>, repairs: string[]): void {
   repairEnum(config, 'theme', ['auto', 'light', 'dark'] as const, DEFAULT_APP_CONFIG.theme, repairs)
   repairEnum(config, 'taskCardMode', ['full', 'compact'] as const, DEFAULT_APP_CONFIG.taskCardMode, repairs)
-  repairEnum(
-    config,
-    'colorScheme',
-    COLOR_SCHEMES.map((scheme) => scheme.id),
-    DEFAULT_APP_CONFIG.colorScheme,
-    repairs,
-  )
+  repairEnum(config, 'colorScheme', getAllowedColorSchemeIds(), DEFAULT_APP_CONFIG.colorScheme, repairs)
+  const customColorScheme = normalizeCustomColorScheme(config.customColorScheme)
+  if (config.customColorScheme !== customColorScheme) repairs.push('customColorScheme')
+  config.customColorScheme = customColorScheme
   repairEnum(config, 'updateChannel', UPDATE_CHANNELS, DEFAULT_APP_CONFIG.updateChannel, repairs)
   repairEnum(config, 'logLevel', APP_LOG_LEVELS, DEFAULT_APP_CONFIG.logLevel, repairs)
   repairEnum(config, 'aria2LogLevel', ARIA2_LOG_LEVELS, DEFAULT_APP_CONFIG.aria2LogLevel, repairs)

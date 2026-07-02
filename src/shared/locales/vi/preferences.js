@@ -345,7 +345,9 @@ export default {
   'color-scheme-glacier': 'Sông băng',
   'color-scheme-evergreen': 'Thường xanh',
   'color-scheme-graphite': 'Than chì',
+  'color-scheme-custom': 'Tùy chỉnh',
   'color-scheme-sakura': 'Hoa anh đào',
+  'custom-color-scheme': 'Màu tùy chỉnh',
   'color-scheme-switched': 'Đã chuyển sang bảng màu {name}',
   'open-settings': 'Đi đến Cài đặt',
   'protocol-unregister-manual-required':

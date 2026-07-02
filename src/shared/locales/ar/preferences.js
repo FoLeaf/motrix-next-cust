@@ -343,8 +343,10 @@ export default {
   'color-scheme-glacier': 'الجليد',
   'color-scheme-evergreen': 'الخضرة الدائمة',
   'color-scheme-graphite': 'الجرافيت',
+  'color-scheme-custom': 'لون مخصص',
   'color-scheme-sakura': 'أزهار الكرز',
-  'color-scheme-switched': 'تم التبديل إلى نظام ألوان {name}',
+  'custom-color-scheme': 'لون مخصص',
+  'color-scheme-switched': 'تم التبديل إلى {name} كنظام ألوان',
   'open-settings': 'الانتقال إلى الإعدادات',
   'protocol-unregister-manual-required':
     'بسبب قيود النظام، لا يمكن إلغاء هذا الارتباط داخل التطبيق. يرجى تغييره يدوياً.',

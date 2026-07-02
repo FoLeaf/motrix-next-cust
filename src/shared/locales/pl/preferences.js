@@ -349,7 +349,9 @@ export default {
   'color-scheme-glacier': 'Lodowiec',
   'color-scheme-evergreen': 'Wiecznie zielony',
   'color-scheme-graphite': 'Grafit',
+  'color-scheme-custom': 'Niestandardowy',
   'color-scheme-sakura': 'Sakura',
+  'custom-color-scheme': 'Kolor niestandardowy',
   'color-scheme-switched': 'Przełączono na schemat kolorów {name}',
   'open-settings': 'Przejdź do ustawień',
   'protocol-unregister-manual-required':

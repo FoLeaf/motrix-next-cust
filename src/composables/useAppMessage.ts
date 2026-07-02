@@ -1,7 +1,7 @@
 /** @fileoverview Composable providing application-level message notifications. */
 import { h, type VNodeChild } from 'vue'
 import { useMessage, type MessageOptions } from 'naive-ui'
-import { MESSAGE_DURATION } from '@shared/timing'
+import { MESSAGE_DURATION, MESSAGE_MAX_COUNT } from '@shared/timing'
 import { ellipsis } from '@shared/utils/format'
 
 /** Maximum display length for toast notification content. */
@@ -10,16 +10,18 @@ const TOAST_MAX_LENGTH = 128
 /** Content accepted by message methods — plain text or VNode render function. */
 export type MessageContent = string | (() => VNodeChild)
 
+type MessageApi = ReturnType<typeof useMessage>
+type MessageHandle = ReturnType<MessageApi['error']>
+type MessageFn = (content: MessageContent, options?: MessageOptions) => MessageHandle
+
 const DEFAULTS: MessageOptions = {
   closable: true,
   duration: MESSAGE_DURATION,
   keepAliveOnHover: true,
 }
 
-const activeMessages = new Map<
-  string,
-  { el: ReturnType<ReturnType<typeof useMessage>['error']>; timer: ReturnType<typeof setTimeout> }
->()
+const activeMessages = new Map<string, { el: MessageHandle; timer: ReturnType<typeof setTimeout> }>()
+const messageQueue: MessageHandle[] = []
 
 function renderTextToast(content: string): () => VNodeChild {
   return () =>
@@ -36,6 +38,41 @@ function renderTextToast(content: string): () => VNodeChild {
     )
 }
 
+function forgetMessage(el: MessageHandle): void {
+  const index = messageQueue.indexOf(el)
+  if (index >= 0) messageQueue.splice(index, 1)
+}
+
+function dismissOverflowMessages(): void {
+  while (messageQueue.length >= MESSAGE_MAX_COUNT) {
+    const oldest = messageQueue.shift()
+    oldest?.destroy()
+  }
+}
+
+function showTrackedMessage(
+  fn: MessageFn,
+  content: MessageContent,
+  options?: MessageOptions,
+  onAfterLeave?: () => void,
+): MessageHandle {
+  let el: MessageHandle | null = null
+  const mergedOptions: MessageOptions = {
+    ...DEFAULTS,
+    ...options,
+    onAfterLeave: () => {
+      if (el) forgetMessage(el)
+      onAfterLeave?.()
+      options?.onAfterLeave?.()
+    },
+  }
+
+  dismissOverflowMessages()
+  el = fn(content, mergedOptions)
+  messageQueue.push(el)
+  return el
+}
+
 /**
  * Dedup-aware message dispatcher.
  *
@@ -43,15 +80,11 @@ function renderTextToast(content: string): () => VNodeChild {
  * For render functions: passes through directly to Naive UI (no dedup —
  * render functions are unique closures that cannot be compared by value).
  */
-function dedupShow(
-  fn: (content: MessageContent, options?: MessageOptions) => ReturnType<ReturnType<typeof useMessage>['error']>,
-  content: MessageContent,
-  options?: MessageOptions,
-) {
+function dedupShow(fn: MessageFn, content: MessageContent, options?: MessageOptions) {
   // VNode render functions: pass through directly to Naive UI.
   // No dedup — each render closure is unique and cannot be compared.
   if (typeof content === 'function') {
-    return fn(content, { ...DEFAULTS, ...options })
+    return showTrackedMessage(fn, content, options)
   }
 
   const key = content
@@ -61,17 +94,18 @@ function dedupShow(
 
   if (existing) {
     existing.el.destroy()
+    forgetMessage(existing.el)
     clearTimeout(existing.timer)
     activeMessages.delete(key)
     setTimeout(() => {
-      const el = fn(renderTextToast(display), { ...DEFAULTS, ...options })
+      const el = showTrackedMessage(fn, renderTextToast(display), options, () => activeMessages.delete(key))
       const timer = setTimeout(() => activeMessages.delete(key), duration)
       activeMessages.set(key, { el, timer })
     }, 80)
     return existing.el
   }
 
-  const el = fn(renderTextToast(display), { ...DEFAULTS, ...options })
+  const el = showTrackedMessage(fn, renderTextToast(display), options, () => activeMessages.delete(key))
   const timer = setTimeout(() => activeMessages.delete(key), duration)
   activeMessages.set(key, { el, timer })
   return el

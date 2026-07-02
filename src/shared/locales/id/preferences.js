@@ -349,7 +349,9 @@ export default {
   'color-scheme-glacier': 'Gletser',
   'color-scheme-evergreen': 'Hijau Abadi',
   'color-scheme-graphite': 'Grafit',
+  'color-scheme-custom': 'Kustom',
   'color-scheme-sakura': 'Sakura',
+  'custom-color-scheme': 'Warna Kustom',
   'color-scheme-switched': 'Beralih ke skema warna {name}',
   'open-settings': 'Buka Pengaturan',
   'protocol-unregister-manual-required':

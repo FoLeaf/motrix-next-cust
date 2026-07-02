@@ -348,8 +348,10 @@ export default {
   'color-scheme-glacier': 'یخچال',
   'color-scheme-evergreen': 'همیشه‌سبز',
   'color-scheme-graphite': 'گرافیت',
+  'color-scheme-custom': 'سفارشی',
   'color-scheme-sakura': 'ساکورا',
-  'color-scheme-switched': 'طرح رنگ به {name} تغییر کرد',
+  'custom-color-scheme': 'رنگ سفارشی',
+  'color-scheme-switched': 'به طرح رنگ {name} تغییر کرد',
   'open-settings': 'رفتن به تنظیمات',
   'protocol-unregister-manual-required':
     'به دلیل محدودیت سیستم، این ارتباط را نمی‌توان در برنامه لغو کرد. لطفاً آن را دستی تغییر دهید.',

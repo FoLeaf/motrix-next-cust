@@ -347,8 +347,10 @@ export default {
   'color-scheme-glacier': 'Glacier',
   'color-scheme-evergreen': 'Evergreen',
   'color-scheme-graphite': 'Graphite',
+  'color-scheme-custom': 'कस्टम',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': '{name} पर switched',
+  'custom-color-scheme': 'कस्टम रंग',
+  'color-scheme-switched': '{name} रंग योजना पर स्विच किया गया',
   'open-settings': 'Settings पर जाएं',
   'protocol-unregister-manual-required':
     'System restrictions के कारण इस association को app में remove नहीं किया जा सकता। कृपया manually बदलें।',

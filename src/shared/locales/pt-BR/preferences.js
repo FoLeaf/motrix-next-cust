@@ -350,8 +350,10 @@ export default {
   'color-scheme-glacier': 'Geleira',
   'color-scheme-evergreen': 'Sempre-verde',
   'color-scheme-graphite': 'Grafite',
+  'color-scheme-custom': 'Personalizado',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Esquema de cores alterado para {name}',
+  'custom-color-scheme': 'Cor personalizada',
+  'color-scheme-switched': 'Alterado para o esquema de cores {name}',
   'open-settings': 'Ir para Configurações',
   'protocol-unregister-manual-required':
     'Devido a restrições do sistema, esta associação não pode ser removida no app. Altere-a manualmente.',

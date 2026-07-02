@@ -347,8 +347,10 @@ export default {
   'color-scheme-glacier': 'グレイシャー',
   'color-scheme-evergreen': 'エバーグリーン',
   'color-scheme-graphite': 'グラファイト',
+  'color-scheme-custom': 'カスタム',
   'color-scheme-sakura': 'サクラ',
-  'color-scheme-switched': 'カラースキームを {name} に変更しました',
+  'custom-color-scheme': 'カスタムカラー',
+  'color-scheme-switched': '{name} カラースキームに変更しました',
   'open-settings': '設定を開く',
   'protocol-unregister-manual-required':
     'システムの制限により、この関連付けはアプリ内で解除できません。手動で変更してください。',

@@ -352,7 +352,9 @@ export default {
   'color-scheme-glacier': 'Glacera',
   'color-scheme-evergreen': 'Perenne',
   'color-scheme-graphite': 'Grafit',
+  'color-scheme-custom': 'Personalitzat',
   'color-scheme-sakura': 'Sakura',
+  'custom-color-scheme': 'Color personalitzat',
   'color-scheme-switched': "S'ha canviat a l'esquema de colors {name}",
   'open-settings': 'Anar a la configuració',
   'protocol-unregister-manual-required':

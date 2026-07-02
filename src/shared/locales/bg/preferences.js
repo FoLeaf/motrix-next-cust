@@ -347,7 +347,9 @@ export default {
   'color-scheme-glacier': 'Ледник',
   'color-scheme-evergreen': 'Вечнозелен',
   'color-scheme-graphite': 'Графит',
+  'color-scheme-custom': 'Персонализиран',
   'color-scheme-sakura': 'Сакура',
+  'custom-color-scheme': 'Персонализиран цвят',
   'color-scheme-switched': 'Превключено към цветова схема {name}',
   'open-settings': 'Към настройките',
   'protocol-unregister-manual-required':

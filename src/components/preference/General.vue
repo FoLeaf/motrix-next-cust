@@ -21,7 +21,8 @@ import {
   buildGeneralSystemConfig,
   transformGeneralForStore,
 } from '@/composables/useGeneralPreference'
-import { COLOR_SCHEMES, ENGINE_RPC_PORT } from '@shared/constants'
+import { COLOR_SCHEMES, CUSTOM_COLOR_SCHEME_ID, ENGINE_RPC_PORT } from '@shared/constants'
+import { normalizeCustomColorScheme } from '@shared/utils/colorSchemeConfig'
 import { useAppMessage } from '@/composables/useAppMessage'
 import {
   NForm,
@@ -36,6 +37,7 @@ import {
   NTag,
   NRadioGroup,
   NRadioButton,
+  NColorPicker,
   NIcon,
   useDialog,
 } from 'naive-ui'
@@ -144,18 +146,29 @@ const { form, isDirty, handleSave, handleReset, patchSnapshot, resetSnapshot } =
 // to handle — the form correctly initialises with 'auto' from config.
 
 // ── Instant color-scheme application ─────────────────────────────────
-watch(
-  () => form.value.colorScheme,
-  (newId, oldId) => {
-    if (!newId || newId === oldId) return
-    preferenceStore.updateAndSave({ colorScheme: newId })
-    patchSnapshot({ colorScheme: newId } as Partial<typeof form.value>)
-    const scheme = COLOR_SCHEMES.find((s) => s.id === newId)
-    if (scheme) {
-      message.success(t('preferences.color-scheme-switched', { name: t(scheme.labelKey) }))
-    }
-  },
-)
+function handlePresetColorScheme(scheme: (typeof COLOR_SCHEMES)[number]): void {
+  if (form.value.colorScheme === scheme.id) return
+
+  form.value.colorScheme = scheme.id
+  preferenceStore.updateAndSave({ colorScheme: scheme.id, customColorScheme: form.value.customColorScheme })
+  patchSnapshot({ colorScheme: scheme.id } as Partial<typeof form.value>)
+  message.success(t('preferences.color-scheme-switched', { name: t(scheme.labelKey) }))
+}
+
+async function handleCustomColorChange(value: string | null): Promise<void> {
+  const color = normalizeCustomColorScheme(value)
+  if (form.value.colorScheme === CUSTOM_COLOR_SCHEME_ID && form.value.customColorScheme === color) return
+
+  form.value.customColorScheme = color
+  form.value.colorScheme = CUSTOM_COLOR_SCHEME_ID
+  patchSnapshot({ colorScheme: CUSTOM_COLOR_SCHEME_ID, customColorScheme: color } as Partial<typeof form.value>)
+  await preferenceStore.updateAndSave({ colorScheme: CUSTOM_COLOR_SCHEME_ID, customColorScheme: color })
+}
+
+function handleCustomColorComplete(value: string): void {
+  const color = normalizeCustomColorScheme(value)
+  message.success(t('preferences.color-scheme-switched', { name: color }))
+}
 
 // ── Instant theme application ────────────────────────────────────────
 watch(
@@ -420,7 +433,7 @@ onMounted(async () => {
                 class="color-swatch"
                 :class="{ active: form.colorScheme === scheme.id }"
                 :style="{ '--swatch-color': scheme.seed }"
-                @click="form.colorScheme = scheme.id"
+                @click="handlePresetColorScheme(scheme)"
               >
                 <svg v-if="form.colorScheme === scheme.id" class="swatch-check" viewBox="0 0 16 16" fill="none">
                   <path
@@ -435,6 +448,20 @@ onMounted(async () => {
             </template>
             {{ t(scheme.labelKey) }}
           </MTooltip>
+        </div>
+      </NFormItem>
+      <NFormItem :label="t('preferences.custom-color-scheme')">
+        <div class="custom-color-picker-wrap">
+          <NColorPicker
+            :value="form.customColorScheme"
+            :modes="['hex']"
+            :show-alpha="false"
+            :show-preview="true"
+            :swatches="COLOR_SCHEMES.map((scheme) => scheme.seed)"
+            class="custom-color-picker"
+            @update:value="handleCustomColorChange"
+            @complete="handleCustomColorComplete"
+          />
         </div>
       </NFormItem>
       <NFormItem :label="t('preferences.task-card-mode')">
@@ -583,6 +610,14 @@ onMounted(async () => {
   box-shadow:
     0 0 0 2px var(--swatch-color),
     0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.custom-color-picker-wrap {
+  width: 100px;
+  flex: 0 0 auto;
+  display: inline-block;
+}
+.custom-color-picker {
+  width: 100%;
 }
 .swatch-check {
   width: 14px;

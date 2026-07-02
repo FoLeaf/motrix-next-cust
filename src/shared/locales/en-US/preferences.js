@@ -346,8 +346,10 @@ export default {
   'color-scheme-glacier': 'Glacier',
   'color-scheme-evergreen': 'Evergreen',
   'color-scheme-graphite': 'Graphite',
+  'color-scheme-custom': 'Custom',
   'color-scheme-sakura': 'Sakura',
-  'color-scheme-switched': 'Switched to {name}',
+  'custom-color-scheme': 'Custom Color',
+  'color-scheme-switched': 'Switched to {name} color scheme',
   'open-settings': 'Go to Settings',
   'protocol-unregister-manual-required':
     'Due to system restrictions, this association cannot be removed in the app. Please change it manually.',

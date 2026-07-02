@@ -348,8 +348,10 @@ export default {
   'color-scheme-glacier': 'Льодовик',
   'color-scheme-evergreen': 'Вічнозелений',
   'color-scheme-graphite': 'Графіт',
+  'color-scheme-custom': 'Власна',
   'color-scheme-sakura': 'Сакура',
-  'color-scheme-switched': 'Кольорову схему змінено на {name}',
+  'custom-color-scheme': 'Власний колір',
+  'color-scheme-switched': 'Перемкнено на колірну схему {name}',
   'open-settings': 'Перейти до налаштувань',
   'protocol-unregister-manual-required':
     'Через системні обмеження цю асоціацію не можна скасувати в застосунку. Змініть її вручну.',

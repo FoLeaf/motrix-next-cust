@@ -343,7 +343,9 @@ export default {
   'color-scheme-glacier': 'เกลเซียร์',
   'color-scheme-evergreen': 'เอเวอร์กรีน',
   'color-scheme-graphite': 'แกรไฟต์',
+  'color-scheme-custom': 'กำหนดเอง',
   'color-scheme-sakura': 'ซากุระ',
+  'custom-color-scheme': 'สีที่กำหนดเอง',
   'color-scheme-switched': 'เปลี่ยนเป็นชุดสี {name} แล้ว',
   'open-settings': 'ไปที่การตั้งค่า',
   'protocol-unregister-manual-required':

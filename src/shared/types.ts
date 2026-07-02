@@ -262,6 +262,7 @@ export interface AppConfig {
   dbSchemaVersion: number
   theme: 'auto' | 'light' | 'dark'
   colorScheme: string
+  customColorScheme: string
   taskCardMode: 'full' | 'compact'
   taskPageSize: number
   locale: string

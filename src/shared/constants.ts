@@ -17,6 +17,8 @@ export interface ColorSchemeDefinition {
   labelKey: string
   /** Seed hex fed to MCU `themeFromSourceColor` to generate the full M3 tonal palette. */
   seed: string
+  /** Palette generation mode. Content keeps low-chroma colors visually neutral. */
+  variant?: 'source' | 'content'
 }
 
 /**
@@ -39,9 +41,12 @@ export const COLOR_SCHEMES: ColorSchemeDefinition[] = [
   { id: 'coral', labelKey: 'preferences.color-scheme-coral', seed: '#F97316' },
   { id: 'glacier', labelKey: 'preferences.color-scheme-glacier', seed: '#06B6D4' },
   { id: 'evergreen', labelKey: 'preferences.color-scheme-evergreen', seed: '#15803D' },
-  { id: 'graphite', labelKey: 'preferences.color-scheme-graphite', seed: '#6B7280' },
+  { id: 'graphite', labelKey: 'preferences.color-scheme-graphite', seed: '#737373', variant: 'content' },
   { id: 'sakura', labelKey: 'preferences.color-scheme-sakura', seed: '#EC4899' },
 ]
+
+export const CUSTOM_COLOR_SCHEME_ID = 'custom'
+export const DEFAULT_CUSTOM_COLOR_SCHEME = '#737373'
 
 export const APP_RUN_MODE = {
   STANDARD: 1,
@@ -331,6 +336,7 @@ export const DEFAULT_APP_CONFIG = {
   // ── Appearance ──────────────────────────────────────────────────
   theme: 'auto' as const,
   colorScheme: 'amber',
+  customColorScheme: DEFAULT_CUSTOM_COLOR_SCHEME,
   taskCardMode: 'full' as const,
   taskPageSize: 20,
   locale: 'auto',

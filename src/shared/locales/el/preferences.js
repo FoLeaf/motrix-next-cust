@@ -352,8 +352,10 @@ export default {
   'color-scheme-glacier': 'Παγετώνας',
   'color-scheme-evergreen': 'Αειθαλές',
   'color-scheme-graphite': 'Γραφίτης',
+  'color-scheme-custom': 'Προσαρμοσμένο',
   'color-scheme-sakura': 'Σακούρα',
-  'color-scheme-switched': 'Εναλλαγή σε χρωματικό σχήμα {name}',
+  'custom-color-scheme': 'Προσαρμοσμένο χρώμα',
+  'color-scheme-switched': 'Έγινε αλλαγή στο χρωματικό σχήμα {name}',
   'open-settings': 'Μετάβαση στις ρυθμίσεις',
   'protocol-unregister-manual-required':
     'Λόγω περιορισμών του συστήματος, αυτή η συσχέτιση δεν μπορεί να ακυρωθεί μέσα στην εφαρμογή. Αλλάξτε τη χειροκίνητα.',
