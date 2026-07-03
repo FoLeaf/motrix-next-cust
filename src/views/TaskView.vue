@@ -29,6 +29,7 @@ const dialog = useDialog()
 const message = useAppMessage()
 const { isDark } = useTheme()
 const watermarkSrc = computed(() => (isDark.value ? watermarkLight : watermarkDark))
+const showTaskListWatermark = computed(() => preferenceStore.config.taskListWatermark)
 
 const stoppingGids = ref<string[]>([])
 provide('stoppingGids', stoppingGids)
@@ -125,11 +126,12 @@ onBeforeUnmount(() => {
       <TaskActions />
     </header>
     <div class="panel-body">
-      <!-- Permanent brand watermark — positioned outside the scroll container
-           so it stays fixed while task cards scroll underneath -->
-      <div class="watermark" @dragstart.prevent @selectstart.prevent>
-        <img :src="watermarkSrc" alt="Motrix Next" class="watermark-brand" draggable="false" />
-      </div>
+      <!-- Brand watermark stays outside the scroll container so task cards scroll above it. -->
+      <Transition name="watermark-fade">
+        <div v-if="showTaskListWatermark" class="watermark" @dragstart.prevent @selectstart.prevent>
+          <img :src="watermarkSrc" alt="Motrix Next" class="watermark-brand" draggable="false" />
+        </div>
+      </Transition>
       <div class="panel-content">
         <TaskList
           @pause="handlePauseTask"
@@ -210,7 +212,6 @@ onBeforeUnmount(() => {
   pointer-events: none;
   user-select: none;
   z-index: 0;
-  animation: watermark-in 0.5s cubic-bezier(0.2, 0, 0, 1) both;
 }
 .watermark-brand {
   max-width: 480px;
@@ -219,12 +220,12 @@ onBeforeUnmount(() => {
   user-select: none;
   -webkit-user-drag: none;
 }
-@keyframes watermark-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.watermark-fade-enter-active,
+.watermark-fade-leave-active {
+  transition: opacity 0.28s cubic-bezier(0.2, 0, 0, 1);
+}
+.watermark-fade-enter-from,
+.watermark-fade-leave-to {
+  opacity: 0;
 }
 </style>

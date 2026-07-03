@@ -340,6 +340,7 @@ export default {
   'color-scheme': 'Esquema de cores',
   'task-card-mode': 'Cartão da tarefa',
   'sidebar-task-counts': 'Contadores de tarefas na barra lateral',
+  'task-list-watermark': 'Marca d\'água da lista de tarefas',
   'task-card-mode-full': 'Completo',
   'task-card-mode-compact': 'Compacto',
   'color-scheme-amber': 'Ouro âmbar',

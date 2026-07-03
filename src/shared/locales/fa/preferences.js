@@ -338,6 +338,7 @@ export default {
   'color-scheme': 'طرح رنگ',
   'task-card-mode': 'کارت وظیفه',
   'sidebar-task-counts': 'شمارنده‌های وظیفه در نوار کناری',
+  'task-list-watermark': 'واترمارک فهرست وظایف',
   'task-card-mode-full': 'کامل',
   'task-card-mode-compact': 'فشرده',
   'color-scheme-amber': 'طلایی کهربایی',

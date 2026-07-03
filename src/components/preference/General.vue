@@ -182,15 +182,6 @@ watch(
   },
 )
 
-watch(
-  () => form.value.sidebarTaskCounts,
-  (enabled, oldEnabled) => {
-    if (enabled === oldEnabled) return
-    preferenceStore.updateAndSave({ sidebarTaskCounts: enabled })
-    patchSnapshot({ sidebarTaskCounts: enabled } as Partial<typeof form.value>)
-  },
-)
-
 // ── Lightweight mode ↔ Minimize-to-tray linkage ─────────────────────
 watch(
   () => form.value.lightweightMode,
@@ -485,6 +476,9 @@ onMounted(async () => {
         </NFormItem>
         <NFormItem :label="t('preferences.sidebar-task-counts')">
           <NSwitch v-model:value="form.sidebarTaskCounts" />
+        </NFormItem>
+        <NFormItem :label="t('preferences.task-list-watermark')">
+          <NSwitch v-model:value="form.taskListWatermark" />
         </NFormItem>
         <NFormItem v-if="isMac" :label="t('preferences.dock-badge-speed')">
           <NSwitch v-model:value="form.dockBadgeSpeed" />

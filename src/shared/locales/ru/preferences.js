@@ -338,6 +338,7 @@ export default {
   'color-scheme': 'Цветовая схема',
   'task-card-mode': 'Карточка задачи',
   'sidebar-task-counts': 'Счетчики задач в боковой панели',
+  'task-list-watermark': 'Водяной знак списка задач',
   'task-card-mode-full': 'Полная',
   'task-card-mode-compact': 'Компактная',
   'color-scheme-amber': 'Янтарное золото',

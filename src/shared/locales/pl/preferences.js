@@ -339,6 +339,7 @@ export default {
   'color-scheme': 'Schemat kolorów',
   'task-card-mode': 'Karta zadania',
   'sidebar-task-counts': 'Liczniki zadań na pasku bocznym',
+  'task-list-watermark': 'Znak wodny listy zadań',
   'task-card-mode-full': 'Pełna',
   'task-card-mode-compact': 'Kompaktowa',
   'color-scheme-amber': 'Bursztynowe złoto',

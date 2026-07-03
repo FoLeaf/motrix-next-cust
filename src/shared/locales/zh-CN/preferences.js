@@ -327,6 +327,7 @@ export default {
   'color-scheme': '配色方案',
   'task-card-mode': '任务卡片',
   'sidebar-task-counts': '侧边栏任务计数',
+  'task-list-watermark': '任务列表水印',
   'task-card-mode-full': '完整',
   'task-card-mode-compact': '紧凑',
   'color-scheme-amber': '琥珀金',

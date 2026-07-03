@@ -339,6 +339,7 @@ export default {
   'color-scheme': 'Színséma',
   'task-card-mode': 'Feladatkártya',
   'sidebar-task-counts': 'Oldalsáv feladatszámlálói',
+  'task-list-watermark': 'Feladatlista vízjel',
   'task-card-mode-full': 'Teljes',
   'task-card-mode-compact': 'Kompakt',
   'color-scheme-amber': 'Borostyánarany',

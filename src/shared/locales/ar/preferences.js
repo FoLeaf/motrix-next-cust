@@ -333,6 +333,7 @@ export default {
   'color-scheme': 'نظام الألوان',
   'task-card-mode': 'بطاقة المهمة',
   'sidebar-task-counts': 'عداد مهام الشريط الجانبي',
+  'task-list-watermark': 'علامة مائية لقائمة المهام',
   'task-card-mode-full': 'كامل',
   'task-card-mode-compact': 'مضغوط',
   'color-scheme-amber': 'الذهب الكهرماني',

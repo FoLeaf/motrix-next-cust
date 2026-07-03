@@ -345,6 +345,7 @@ export default {
   'color-scheme': 'Palette de couleurs',
   'task-card-mode': 'Carte de tâche',
   'sidebar-task-counts': 'Compteurs de tâches dans la barre latérale',
+  'task-list-watermark': 'Filigrane de la liste des tâches',
   'task-card-mode-full': 'Complet',
   'task-card-mode-compact': 'Compact',
   'color-scheme-amber': 'Or ambré',

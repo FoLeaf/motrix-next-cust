@@ -342,6 +342,7 @@ export default {
   'color-scheme': 'Χρωματικό σχήμα',
   'task-card-mode': 'Κάρτα εργασίας',
   'sidebar-task-counts': 'Μετρητές εργασιών πλευρικής γραμμής',
+  'task-list-watermark': 'Υδατογράφημα λίστας εργασιών',
   'task-card-mode-full': 'Πλήρης',
   'task-card-mode-compact': 'Συμπαγής',
   'color-scheme-amber': 'Κεχριμπαρένιο χρυσό',

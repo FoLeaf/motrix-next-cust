@@ -340,6 +340,7 @@ export default {
   'color-scheme': 'Kleurenschema',
   'task-card-mode': 'Taakkaart',
   'sidebar-task-counts': 'Taaktellers in de zijbalk',
+  'task-list-watermark': 'Watermerk van takenlijst',
   'task-card-mode-full': 'Volledig',
   'task-card-mode-compact': 'Compact',
   'color-scheme-amber': 'Barnsteengoud',

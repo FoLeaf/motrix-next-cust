@@ -338,6 +338,7 @@ export const DEFAULT_APP_CONFIG = {
   colorScheme: 'amber',
   customColorScheme: DEFAULT_CUSTOM_COLOR_SCHEME,
   taskCardMode: 'full' as const,
+  taskListWatermark: true,
   sidebarTaskCounts: true,
   taskPageSize: 20,
   locale: 'auto',

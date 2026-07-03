@@ -338,6 +338,7 @@ export default {
   'color-scheme': 'Колірна схема',
   'task-card-mode': 'Картка завдання',
   'sidebar-task-counts': 'Лічильники завдань на бічній панелі',
+  'task-list-watermark': 'Водяний знак списку завдань',
   'task-card-mode-full': 'Повна',
   'task-card-mode-compact': 'Компактна',
   'color-scheme-amber': 'Бурштинове золото',

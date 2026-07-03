@@ -265,6 +265,7 @@ export interface AppConfig {
   colorScheme: string
   customColorScheme: string
   taskCardMode: 'full' | 'compact'
+  taskListWatermark: boolean
   sidebarTaskCounts: boolean
   taskPageSize: number
   locale: string

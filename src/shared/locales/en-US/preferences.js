@@ -336,6 +336,7 @@ export default {
   'color-scheme': 'Color Scheme',
   'task-card-mode': 'Task Card',
   'sidebar-task-counts': 'Sidebar task counts',
+  'task-list-watermark': 'Task list watermark',
   'task-card-mode-full': 'Full',
   'task-card-mode-compact': 'Compact',
   'color-scheme-amber': 'Amber Gold',

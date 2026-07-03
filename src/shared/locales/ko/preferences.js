@@ -335,6 +335,7 @@ export default {
   'color-scheme': '색상 테마',
   'task-card-mode': '작업 카드',
   'sidebar-task-counts': '사이드바 작업 수',
+  'task-list-watermark': '작업 목록 워터마크',
   'task-card-mode-full': '전체',
   'task-card-mode-compact': '간결',
   'color-scheme-amber': '앰버 골드',

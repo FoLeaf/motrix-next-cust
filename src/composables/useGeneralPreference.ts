@@ -17,6 +17,7 @@ export interface GeneralForm {
   colorScheme: string
   customColorScheme: string
   taskCardMode: AppConfig['taskCardMode']
+  taskListWatermark: boolean
   sidebarTaskCounts: boolean
   autoCheckUpdate: boolean
   autoCheckUpdateInterval: number
@@ -46,6 +47,7 @@ export function buildGeneralForm(config: AppConfig): GeneralForm {
     colorScheme: config.colorScheme ?? D.colorScheme,
     customColorScheme: config.customColorScheme ?? D.customColorScheme,
     taskCardMode: config.taskCardMode ?? D.taskCardMode,
+    taskListWatermark: config.taskListWatermark ?? D.taskListWatermark,
     sidebarTaskCounts: config.sidebarTaskCounts ?? D.sidebarTaskCounts,
     autoCheckUpdate: config.autoCheckUpdate ?? D.autoCheckUpdate,
     autoCheckUpdateInterval: config.autoCheckUpdateInterval ?? D.autoCheckUpdateInterval,

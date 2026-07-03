@@ -337,6 +337,7 @@ export default {
   'color-scheme': 'Fargevalg',
   'task-card-mode': 'Oppgavekort',
   'sidebar-task-counts': 'Oppgavetellere i sidepanelet',
+  'task-list-watermark': 'Vannmerke for oppgaveliste',
   'task-card-mode-full': 'Full',
   'task-card-mode-compact': 'Kompakt',
   'color-scheme-amber': 'Ravgull',
