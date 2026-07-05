@@ -357,6 +357,14 @@ impl TaskNotifier {
     /// Suppresses callbacks during the first scan to avoid ghost
     /// notifications for pre-existing terminal tasks.
     pub fn scan(&mut self, tasks: &[Aria2Task]) -> Vec<(String, TaskEvent)> {
+        self.scan_with_initial_recent_births(tasks, &HashSet::new())
+    }
+
+    pub fn scan_with_initial_recent_births(
+        &mut self,
+        tasks: &[Aria2Task],
+        initial_recent_birth_gids: &HashSet<String>,
+    ) -> Vec<(String, TaskEvent)> {
         let mut emit = Vec::new();
 
         for task in tasks {
@@ -369,7 +377,8 @@ impl TaskNotifier {
                 if let Some(code) = &task.error_code {
                     if code != "0" && !self.notified_errors.contains(&task.gid) {
                         self.notified_errors.insert(task.gid.clone());
-                        if self.initial_scan_done() {
+                        if self.initial_scan_done() || initial_recent_birth_gids.contains(&task.gid)
+                        {
                             emit.push((
                                 events::TASK_ERROR.to_string(),
                                 TaskEvent::from_aria2(task),
@@ -382,7 +391,7 @@ impl TaskNotifier {
             // Completion detection
             if task.status == "complete" && !self.notified_completes.contains(&task.gid) {
                 self.notified_completes.insert(task.gid.clone());
-                if self.initial_scan_done() {
+                if self.initial_scan_done() || initial_recent_birth_gids.contains(&task.gid) {
                     emit.push((
                         events::TASK_COMPLETE.to_string(),
                         TaskEvent::from_aria2(task),
@@ -487,6 +496,32 @@ fn sharing_restore_keys(task: &Aria2Task, kind: SharingKind) -> Vec<String> {
     keys
 }
 
+async fn recent_task_birth_gids(
+    app: &tauri::AppHandle,
+    since: chrono::DateTime<chrono::Utc>,
+) -> HashSet<String> {
+    let Some(db_state) = app.try_state::<HistoryDbState>() else {
+        return HashSet::new();
+    };
+    let records = match db_state.0.clone().load_birth_records().await {
+        Ok(records) => records,
+        Err(e) => {
+            log::debug!("task_monitor: task_birth preload failed: {e}");
+            return HashSet::new();
+        }
+    };
+
+    records
+        .into_iter()
+        .filter_map(|(gid, added_at)| {
+            let Ok(added_at) = chrono::DateTime::parse_from_rfc3339(&added_at) else {
+                return None;
+            };
+            (added_at.with_timezone(&chrono::Utc) >= since).then_some(gid)
+        })
+        .collect()
+}
+
 /// Handle for controlling the background monitor task.
 pub struct TaskMonitorHandle {
     /// Send `true` to stop the monitor.
@@ -523,6 +558,7 @@ async fn monitor_loop(
 ) {
     let mut notifier = TaskNotifier::new();
     let interval = Duration::from_millis(DEFAULT_INTERVAL_MS);
+    let monitor_started_at = chrono::Utc::now() - chrono::Duration::seconds(5);
 
     // ── Auto-shutdown state ─────────────────────────────────────────
     // Tracks whether active downloads existed during this engine cycle,
@@ -561,7 +597,12 @@ async fn monitor_loop(
         let mut all = active;
         all.extend(stopped);
 
-        let events = notifier.scan(&all);
+        let initial_recent_birth_gids = if !notifier.initial_scan_done() {
+            recent_task_birth_gids(&app, monitor_started_at).await
+        } else {
+            HashSet::new()
+        };
+        let events = notifier.scan_with_initial_recent_births(&all, &initial_recent_birth_gids);
 
         // Track whether this cycle produced a new completion event.
         // Used below to reset `shutdown_triggered` for instant downloads
@@ -636,7 +677,24 @@ async fn monitor_loop(
                     payload.name,
                     webview_alive
                 );
-                send_task_notification(&app, &event_name, &payload, &runtime_config);
+                let activation_token = if event_name == events::TASK_COMPLETE {
+                    super::notification_activation::register_open_target_for_event(&app, &payload)
+                } else {
+                    None
+                };
+                if activation_token.is_some() {
+                    log::debug!(
+                        "task_monitor:completion-open-target registered gid={}",
+                        payload.gid
+                    );
+                }
+                send_task_notification(
+                    &app,
+                    &event_name,
+                    &payload,
+                    &runtime_config,
+                    activation_token.as_deref(),
+                );
                 if let Err(e) = app.emit(&event_name, &payload) {
                     log::warn!("task_monitor: failed to emit {event_name}: {e}");
                 }
@@ -927,6 +985,20 @@ mod tests {
         let events = notifier.scan(&tasks);
         assert!(events.is_empty(), "initial scan should suppress all events");
         assert!(notifier.initial_scan_done());
+    }
+
+    #[test]
+    fn initial_scan_emits_recently_created_instant_completion() {
+        let mut notifier = TaskNotifier::new();
+        let mut recent = HashSet::new();
+        recent.insert("g1".to_string());
+
+        let events =
+            notifier.scan_with_initial_recent_births(&[make_task("g1", "complete")], &recent);
+
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].0, events::TASK_COMPLETE);
+        assert_eq!(events[0].1.gid, "g1");
     }
 
     #[test]

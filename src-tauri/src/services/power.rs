@@ -8,8 +8,8 @@
 use crate::error::AppError;
 
 const DOWNLOAD_REASON: &str = "Active downloads in progress";
-const APP_NAME: &str = "Motrix Next";
-const APP_REVERSE_DOMAIN: &str = "com.motrix.next";
+const APP_NAME: &str = "Motrix Next Opt";
+const APP_REVERSE_DOMAIN: &str = "com.motrix.next.opt";
 
 pub struct PowerGuard {
     inner: PlatformPowerGuard,

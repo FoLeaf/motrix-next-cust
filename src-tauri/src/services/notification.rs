@@ -18,6 +18,9 @@ use std::{
 #[cfg(not(target_os = "linux"))]
 use tauri_plugin_notification::NotificationExt;
 
+#[cfg(windows)]
+use tauri_winrt_notification::{Duration as ToastDuration, Toast};
+
 #[cfg(target_os = "linux")]
 const LINUX_NOTIFICATION_RETENTION_TTL: Duration = Duration::from_secs(120);
 #[cfg(target_os = "linux")]
@@ -207,7 +210,10 @@ pub fn build_task_notification(
         TaskNotificationKind::Start => return None,
         TaskNotificationKind::Complete => (
             texts.download_complete_title.to_string(),
-            format_task_message(texts.download_complete_body, task_name),
+            complete_body_with_path(
+                format_task_message(texts.download_complete_body, task_name),
+                event,
+            ),
         ),
         TaskNotificationKind::SharingComplete => {
             if event.sharing_kind == Some("ed2k") {
@@ -241,6 +247,13 @@ pub fn build_task_notification(
         body,
         locale,
     })
+}
+
+fn complete_body_with_path(body: String, event: &TaskEvent) -> String {
+    match super::notification_activation::resolve_open_target_for_event(event) {
+        Some(path) if !path.trim().is_empty() => format!("{body}\n{path}"),
+        _ => body,
+    }
 }
 
 pub fn build_task_start_notification(
@@ -325,6 +338,7 @@ pub fn send_task_notification(
     event_name: &str,
     event: &TaskEvent,
     config: &RuntimeConfig,
+    activation_token: Option<&str>,
 ) {
     let Some(kind) = kind_for_event(event_name) else {
         return;
@@ -346,7 +360,7 @@ pub fn send_task_notification(
         content.title
     );
 
-    match send_platform_notification(app, &content) {
+    match send_platform_notification(app, &content, activation_token) {
         Ok(dispatch) => {
             let webview_alive = app.get_webview_window("main").is_some();
             log_notification_success(&content, event, dispatch, webview_alive);
@@ -366,7 +380,7 @@ pub fn send_native_notification(
     app: &tauri::AppHandle,
     content: &TaskNotificationContent,
 ) -> Result<(), AppError> {
-    send_platform_notification(app, content)
+    send_platform_notification(app, content, None)
         .map(|_| ())
         .map_err(AppError::Io)
 }
@@ -428,6 +442,7 @@ fn log_notification_success(
 fn send_platform_notification(
     app: &tauri::AppHandle,
     content: &TaskNotificationContent,
+    _activation_token: Option<&str>,
 ) -> Result<NotificationDispatchResult, String> {
     let identity = linux_notification_identity();
     let handle = notify_rust::Notification::new()
@@ -451,19 +466,114 @@ fn send_platform_notification(
     })
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(windows)]
 fn send_platform_notification(
     app: &tauri::AppHandle,
     content: &TaskNotificationContent,
+    activation_token: Option<&str>,
 ) -> Result<NotificationDispatchResult, String> {
+    if content.kind == TaskNotificationKind::Complete {
+        if let Some(token) = activation_token {
+            match send_windows_clickable_notification(app, content, token) {
+                Ok(()) => return Ok(NotificationDispatchResult::Submitted),
+                Err(error) => {
+                    log::warn!(
+                        "notification:clickable-failed fallback=plain type={:?} error={error}",
+                        content.kind
+                    );
+                    send_tauri_plugin_notification(app, content)?;
+                    return Ok(NotificationDispatchResult::Submitted);
+                }
+            }
+        }
+    }
+
+    send_tauri_plugin_notification(app, content)?;
+
+    Ok(NotificationDispatchResult::Submitted)
+}
+
+#[cfg(all(not(target_os = "linux"), not(windows)))]
+fn send_platform_notification(
+    app: &tauri::AppHandle,
+    content: &TaskNotificationContent,
+    _activation_token: Option<&str>,
+) -> Result<NotificationDispatchResult, String> {
+    send_tauri_plugin_notification(app, content)?;
+
+    Ok(NotificationDispatchResult::Submitted)
+}
+
+#[cfg(not(target_os = "linux"))]
+fn send_tauri_plugin_notification(
+    app: &tauri::AppHandle,
+    content: &TaskNotificationContent,
+) -> Result<(), String> {
     app.notification()
         .builder()
         .title(content.title.clone())
         .body(content.body.clone())
         .show()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| error.to_string())
+}
 
-    Ok(NotificationDispatchResult::Submitted)
+#[cfg(windows)]
+fn send_windows_clickable_notification(
+    app: &tauri::AppHandle,
+    content: &TaskNotificationContent,
+    token: &str,
+) -> Result<(), String> {
+    let app_id = app.config().identifier.clone();
+    let app_for_activation = app.clone();
+    let open_activation_url = super::notification_activation::build_activation_url(
+        token,
+        super::notification_activation::NotificationActivationAction::Open,
+    );
+    let dir_activation_url = super::notification_activation::build_activation_url(
+        token,
+        super::notification_activation::NotificationActivationAction::Dir,
+    );
+    let fallback_activation_url = open_activation_url.clone();
+    let (open_label, folder_label) = notification_action_labels(content.locale);
+    let (line1, line2) = split_notification_body(&content.body);
+
+    Toast::new(&app_id)
+        .title(&content.title)
+        .text1(&line1)
+        .text2(&line2)
+        .duration(ToastDuration::Long)
+        .add_button(open_label, &open_activation_url)
+        .add_button(folder_label, &dir_activation_url)
+        .on_activated(move |action| {
+            let target = action
+                .as_deref()
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or(fallback_activation_url.as_str());
+            let _ = super::notification_activation::try_handle_activation_url(
+                &app_for_activation,
+                target,
+            );
+            Ok(())
+        })
+        .show()
+        .map_err(|error| error.to_string())
+}
+
+#[cfg(windows)]
+fn split_notification_body(body: &str) -> (String, String) {
+    let mut lines = body.lines();
+    let first = lines.next().unwrap_or_default().to_string();
+    let rest = lines.collect::<Vec<_>>().join("\n");
+    (first, rest)
+}
+
+#[cfg(windows)]
+fn notification_action_labels(locale: &str) -> (&'static str, &'static str) {
+    if locale.starts_with("zh") {
+        ("打开", "打开文件夹")
+    } else {
+        ("Open", "Folder")
+    }
 }
 
 #[cfg(test)]
@@ -496,7 +606,12 @@ mod tests {
             is_bt: false,
             is_ed2k: false,
             sharing_kind: None,
-            files: Vec::new(),
+            files: vec![crate::services::monitor::TaskEventFile {
+                path: "file.zip".to_string(),
+                length: "1".to_string(),
+                selected: "true".to_string(),
+                uris: Vec::new(),
+            }],
             announce_list: Vec::new(),
         }
     }
@@ -506,7 +621,7 @@ mod tests {
         let content = build_task_notification(events::TASK_COMPLETE, &event(), &cfg()).unwrap();
         assert_eq!(content.kind, TaskNotificationKind::Complete);
         assert_eq!(content.title, "Download Complete");
-        assert_eq!(content.body, "Saved: file.zip");
+        assert_eq!(content.body, "Saved: file.zip\n/tmp/file.zip");
         assert_eq!(content.locale, "en-US");
     }
 

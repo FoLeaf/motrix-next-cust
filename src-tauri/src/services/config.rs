@@ -12,6 +12,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub const DEFAULT_EXTENSION_API_PORT: u16 = 29110;
+const DEFAULT_SPLIT: u32 = 16;
 
 /// Subset of `AppConfig` fields consumed by Rust runtime services.
 ///
@@ -142,6 +143,141 @@ impl RuntimeConfigState {
     pub async fn snapshot(&self) -> RuntimeConfig {
         self.0.read().await.clone()
     }
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadProxyDefaults {
+    #[serde(default)]
+    pub mode: String,
+    #[serde(default)]
+    pub server: String,
+    #[serde(default)]
+    pub username: String,
+    #[serde(default)]
+    pub password: String,
+    #[serde(default)]
+    pub bypass: String,
+    #[serde(default)]
+    pub scope: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadDefaults {
+    #[serde(default)]
+    pub dir: String,
+    #[serde(default = "default_split")]
+    pub split: u32,
+    #[serde(default)]
+    pub user_agent: String,
+    #[serde(default = "default_true")]
+    pub auto_submit_from_extension: bool,
+    #[serde(default = "default_true")]
+    pub silent_auto_submit_from_extension: bool,
+    #[serde(default)]
+    pub file_category_enabled: bool,
+    #[serde(default)]
+    pub file_categories: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub user_agent_rules: Vec<serde_json::Value>,
+    #[serde(default)]
+    pub proxy: DownloadProxyDefaults,
+    #[serde(default = "default_true")]
+    pub task_notification: bool,
+    #[serde(default = "default_true")]
+    pub notify_on_start: bool,
+    #[serde(default = "default_true")]
+    pub notify_on_complete: bool,
+}
+
+fn default_split() -> u32 {
+    DEFAULT_SPLIT
+}
+
+impl Default for DownloadDefaults {
+    fn default() -> Self {
+        Self {
+            dir: String::new(),
+            split: default_split(),
+            user_agent: String::new(),
+            auto_submit_from_extension: true,
+            silent_auto_submit_from_extension: true,
+            file_category_enabled: false,
+            file_categories: Vec::new(),
+            user_agent_rules: Vec::new(),
+            proxy: DownloadProxyDefaults::default(),
+            task_notification: true,
+            notify_on_start: true,
+            notify_on_complete: true,
+        }
+    }
+}
+
+impl DownloadDefaults {
+    pub fn has_file_categories(&self) -> bool {
+        self.file_category_enabled && !self.file_categories.is_empty()
+    }
+
+    pub fn has_user_agent_rules(&self) -> bool {
+        !self.user_agent_rules.is_empty()
+    }
+
+    pub fn download_proxy_enabled(&self) -> bool {
+        self.proxy.mode == "manual"
+            && !self.proxy.server.trim().is_empty()
+            && self
+                .proxy
+                .scope
+                .iter()
+                .any(|scope| scope == "download" || scope == "all")
+    }
+}
+
+pub struct DownloadDefaultsState(pub Arc<RwLock<DownloadDefaults>>);
+
+impl DownloadDefaultsState {
+    pub fn new() -> Self {
+        Self(Arc::new(RwLock::new(DownloadDefaults::default())))
+    }
+
+    pub async fn refresh_from_json(&self, prefs: &serde_json::Value) -> Result<(), String> {
+        let mut cfg: DownloadDefaults = serde_json::from_value(prefs.clone())
+            .map_err(|e| format!("Failed to parse download defaults: {e}"))?;
+        if cfg.split == 0 {
+            cfg.split = default_split();
+        }
+        if cfg.dir.trim().is_empty() {
+            cfg.dir = resolve_user_visible_download_dir();
+        }
+        *self.0.write().await = cfg;
+        log::info!("download_defaults refreshed");
+        Ok(())
+    }
+
+    pub async fn snapshot(&self) -> DownloadDefaults {
+        self.0.read().await.clone()
+    }
+}
+
+pub fn resolve_user_visible_download_dir() -> String {
+    if let Some(path) = dirs::download_dir() {
+        return path_to_string(path);
+    }
+    if let Some(home) = dirs::home_dir() {
+        let downloads = home.join("Downloads");
+        if downloads.exists() {
+            return path_to_string(downloads);
+        }
+        return path_to_string(home);
+    }
+    dirs::data_local_dir()
+        .map(path_to_string)
+        .unwrap_or_default()
+}
+
+fn path_to_string(path: std::path::PathBuf) -> String {
+    path.to_string_lossy().replace('\\', "/")
 }
 
 #[cfg(test)]

@@ -115,7 +115,7 @@ pub mod win_registry {
 
     /// Application name as it appears in Windows Default Apps.
     #[cfg(any(windows, test))]
-    pub const APP_NAME: &str = "Motrix Next";
+    pub const APP_NAME: &str = "Motrix Next Opt";
 
     /// Short description shown in Windows Default Apps tooltip.
     #[cfg(any(windows, test))]
@@ -123,15 +123,15 @@ pub mod win_registry {
 
     /// Manufacturer key path prefix under HKCU\Software.
     #[cfg(any(windows, test))]
-    pub const CAPABILITIES_PATH: &str = "Software\\MotrixNext\\Capabilities";
+    pub const CAPABILITIES_PATH: &str = "Software\\MotrixNextOpt\\Capabilities";
 
     /// The value written to HKCU\Software\RegisteredApplications.
     #[cfg(any(windows, test))]
-    pub const REGISTERED_APPS_VALUE: &str = "Software\\MotrixNext\\Capabilities";
+    pub const REGISTERED_APPS_VALUE: &str = "Software\\MotrixNextOpt\\Capabilities";
 
     /// Registered application name key in RegisteredApplications.
     #[cfg(any(windows, test))]
-    pub const REGISTERED_APP_NAME: &str = "MotrixNext";
+    pub const REGISTERED_APP_NAME: &str = "MotrixNextOpt";
 
     // ── Pure helper functions (cross-platform for testing) ──────────
 
@@ -141,7 +141,7 @@ pub mod win_registry {
     /// naming convention: `{AppName}.{Type}.{Discriminator}`.
     #[cfg(any(windows, test))]
     pub fn prog_id_for_scheme(scheme: &str) -> String {
-        format!("MotrixNext.Url.{scheme}")
+        format!("MotrixNextOpt.Url.{scheme}")
     }
 
     /// Returns the registry path for the ProgID's `shell\open\command`
@@ -927,7 +927,7 @@ mod tests {
         // Microsoft ProgID convention: {AppName}.{Type}.{Discriminator}
         assert_eq!(
             win_registry::prog_id_for_scheme("magnet"),
-            "MotrixNext.Url.magnet"
+            "MotrixNextOpt.Url.magnet"
         );
     }
 
@@ -935,7 +935,7 @@ mod tests {
     fn prog_id_for_thunder_follows_naming_convention() {
         assert_eq!(
             win_registry::prog_id_for_scheme("thunder"),
-            "MotrixNext.Url.thunder"
+            "MotrixNextOpt.Url.thunder"
         );
     }
 
@@ -943,7 +943,7 @@ mod tests {
     fn prog_id_for_motrixnext_follows_naming_convention() {
         assert_eq!(
             win_registry::prog_id_for_scheme("motrixnext"),
-            "MotrixNext.Url.motrixnext"
+            "MotrixNextOpt.Url.motrixnext"
         );
     }
 
@@ -952,27 +952,30 @@ mod tests {
         let path = win_registry::prog_id_command_path("magnet");
         assert_eq!(
             path,
-            "Software\\Classes\\MotrixNext.Url.magnet\\shell\\open\\command"
+            "Software\\Classes\\MotrixNextOpt.Url.magnet\\shell\\open\\command"
         );
     }
 
     #[test]
     fn prog_id_root_path_under_software_classes() {
         let path = win_registry::prog_id_root_path("thunder");
-        assert_eq!(path, "Software\\Classes\\MotrixNext.Url.thunder");
+        assert_eq!(path, "Software\\Classes\\MotrixNextOpt.Url.thunder");
     }
 
     #[test]
     fn url_associations_path_under_capabilities() {
         let path = win_registry::url_associations_path();
-        assert_eq!(path, "Software\\MotrixNext\\Capabilities\\URLAssociations");
+        assert_eq!(
+            path,
+            "Software\\MotrixNextOpt\\Capabilities\\URLAssociations"
+        );
     }
 
     #[test]
     fn capabilities_path_is_correct() {
         assert_eq!(
             win_registry::CAPABILITIES_PATH,
-            "Software\\MotrixNext\\Capabilities"
+            "Software\\MotrixNextOpt\\Capabilities"
         );
     }
 
@@ -987,7 +990,7 @@ mod tests {
 
     #[test]
     fn app_name_is_motrix_next() {
-        assert_eq!(win_registry::APP_NAME, "Motrix Next");
+        assert_eq!(win_registry::APP_NAME, "Motrix Next Opt");
     }
 
     #[test]
@@ -999,8 +1002,8 @@ mod tests {
     }
 
     #[test]
-    fn registered_app_name_is_motrixnext() {
-        assert_eq!(win_registry::REGISTERED_APP_NAME, "MotrixNext");
+    fn registered_app_name_is_motrixnextopt() {
+        assert_eq!(win_registry::REGISTERED_APP_NAME, "MotrixNextOpt");
     }
 
     // ── Cross-platform logic tests ──────────────────────────────────

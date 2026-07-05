@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use crate::services::config::RuntimeConfigState;
+use crate::services::config::{DownloadDefaultsState, RuntimeConfigState};
 use tauri::Manager;
 use tauri_plugin_store::StoreExt;
 
@@ -22,6 +22,13 @@ pub async fn refresh_runtime_config(app: tauri::AppHandle) -> Result<(), AppErro
         .refresh_from_json(&prefs)
         .await
         .map_err(AppError::Store)?;
+
+    if let Some(download_defaults) = app.try_state::<DownloadDefaultsState>() {
+        download_defaults
+            .refresh_from_json(&prefs)
+            .await
+            .map_err(AppError::Store)?;
+    }
 
     Ok(())
 }

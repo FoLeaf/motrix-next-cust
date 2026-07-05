@@ -74,7 +74,7 @@ pub fn get_or_create_main_window(app: &AppHandle) -> Option<tauri::WebviewWindow
     crate::services::frontend_action::mark_frontend_actions_unready(app);
 
     let mut builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-        .title("Motrix Next")
+        .title("Motrix Next Opt")
         .inner_size(1068.0, 680.0)
         .min_inner_size(560.0, 360.0)
         .visible(false);
@@ -159,7 +159,7 @@ pub fn activate_main_window(app: &AppHandle, source: &'static str) -> WindowActi
 pub fn setup_tray(app: &AppHandle) -> Result<TrayMenuState, Box<dyn std::error::Error>> {
     // Create MenuItem references for TrayMenuState (used by update_tray_menu_labels).
     // All three platforms use the same native menu — no platform-specific branching.
-    let show_item = MenuItem::with_id(app, "show", "Show Motrix Next", true, None::<&str>)?;
+    let show_item = MenuItem::with_id(app, "show", "Show Motrix Next Opt", true, None::<&str>)?;
     let new_task_item = MenuItem::with_id(app, "tray-new-task", "New Task", true, None::<&str>)?;
     let resume_all_item =
         MenuItem::with_id(app, "tray-resume-all", "Resume All", true, None::<&str>)?;
@@ -192,7 +192,7 @@ pub fn setup_tray(app: &AppHandle) -> Result<TrayMenuState, Box<dyn std::error::
     let _tray = TrayIconBuilder::with_id("motrix-next")
         .menu(&menu)
         .show_menu_on_left_click(false)
-        .tooltip("Motrix Next")
+        .tooltip("Motrix Next Opt")
         .icon(tray_icon_image())
         .icon_as_template(TRAY_ICON_IS_TEMPLATE)
         .on_tray_icon_event(|tray, event| {

@@ -1,17 +1,17 @@
 <div align="center">
   <img src="src/assets/logo.png" alt="Motrix Next" width="128" height="128" style="border-radius: 24px;" />
-  <h1>Motrix Next</h1>
-  <p>A full-featured download manager — rebuilt from the ground up.</p>
+  <h1>Motrix Next Opt</h1>
+  <p>A lightweight, extension-first custom build of Motrix Next.</p>
 
-[![GitHub release](https://img.shields.io/github/v/release/AnInsomniacy/motrix-next.svg)](https://github.com/AnInsomniacy/motrix-next/releases)
-![Build](https://img.shields.io/github/actions/workflow/status/AnInsomniacy/motrix-next/ci.yml?branch=main&label=Build)
-![Total Downloads](https://img.shields.io/github/downloads/AnInsomniacy/motrix-next/total.svg)
+[![GitHub release](https://img.shields.io/github/v/release/FoLeaf/motrix-next-cust.svg)](https://github.com/FoLeaf/motrix-next-cust/releases)
+![Build](https://img.shields.io/github/actions/workflow/status/FoLeaf/motrix-next-cust/ci.yml?branch=main&label=Build)
+![Total Downloads](https://img.shields.io/github/downloads/FoLeaf/motrix-next-cust/total.svg)
 <br>
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue.svg)
 ![Bundle Size](https://img.shields.io/badge/bundle%20size-~20MB-brightgreen.svg)
 
 [![Website](https://img.shields.io/badge/Website-E0A422?style=for-the-badge&logo=safari&logoColor=white)](https://motrix-next.pages.dev)
-[![Browser Extension](https://img.shields.io/badge/Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/AnInsomniacy/motrix-next-extension)
+[![Browser Extension](https://img.shields.io/badge/Extension-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white)](https://github.com/FoLeaf/motrix-next-extension-cust)
 
 <a href="https://trendshift.io/repositories/24525">
   <img src="https://trendshift.io/api/badge/repositories/24525" alt="AnInsomniacy/motrix-next on Trendshift" width="250" height="55" />
@@ -35,6 +35,21 @@
 
 > [!NOTE]
 > Motrix Next uses [Aria2 Next](https://github.com/AnInsomniacy/aria2-next) as its download engine, a maintained aria2 fork that preserves the original interfaces while fixing long-standing issues, moving to CMake, adding native ED2K support, and updating modern dependencies.
+
+## Motrix Next Opt Custom Build
+
+This repository is a custom low-overhead build focused on a Chrome/Edge extension workflow. It keeps Motrix Next's Tauri + Rust architecture, but moves common browser-download interactions out of the WebView path so downloads can be created, monitored, and opened while the main window stays hidden or destroyed in lightweight mode.
+
+Key custom changes:
+
+- **Extension-first intake** — browser downloads can be submitted directly to the Rust backend and aria2 without rebuilding the Motrix WebView.
+- **Native download takeover** — the companion MV3 extension intercepts common download clicks before Chrome's native download manager takes over, with a fallback cleanup path for browser-created downloads.
+- **Toolbar progress display** — the extension icon shows aggregate download progress and the popup lists Motrix tasks with speed, ETA, save path, and task controls.
+- **Lightweight progress API** — authenticated local `/tasks`, `/events`, `/task-action`, and `/window/show` endpoints expose task snapshots and controls without leaking cookies, URLs, headers, or secrets.
+- **Native completion notifications** — completed downloads include filename and path, with `打开` and `打开文件夹` buttons on Windows. Clicking the notification opens the downloaded file.
+- **Newest-first task sync** — extension task ordering follows Motrix task creation time, newest first.
+
+The companion extension lives at [FoLeaf/motrix-next-extension-cust](https://github.com/FoLeaf/motrix-next-extension-cust).
 
 [Motrix](https://github.com/agalwood/Motrix) by [agalwood](https://github.com/agalwood) was one of the best open-source download managers available — clean UI, aria2-powered, cross-platform. It inspired thousands of users and developers alike.
 

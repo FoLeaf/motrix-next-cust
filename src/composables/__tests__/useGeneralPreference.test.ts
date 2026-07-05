@@ -107,9 +107,9 @@ describe('buildGeneralForm', () => {
 
   // ── Auto Update ─────────────────────────────────────────────────
 
-  it('defaults autoCheckUpdate to true', () => {
+  it('defaults autoCheckUpdate from DEFAULT_APP_CONFIG', () => {
     const form = buildGeneralForm(emptyConfig)
-    expect(form.autoCheckUpdate).toBe(true)
+    expect(form.autoCheckUpdate).toBe(DEFAULT_APP_CONFIG.autoCheckUpdate)
   })
 
   it('defaults autoCheckUpdateInterval to every startup', () => {

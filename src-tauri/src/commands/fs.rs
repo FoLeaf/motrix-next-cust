@@ -22,7 +22,7 @@ fn is_aria2_rotated_log_file(name: &str) -> bool {
 }
 
 fn managed_log_file_kind(name: &str) -> Option<ManagedLogFileKind> {
-    if name == "motrix-next.log" || name == "aria2-next.log" {
+    if name == "motrix-next-opt.log" || name == "motrix-next.log" || name == "aria2-next.log" {
         Some(ManagedLogFileKind::Active)
     } else if is_aria2_rotated_log_file(name) {
         Some(ManagedLogFileKind::Rotated)
@@ -32,7 +32,9 @@ fn managed_log_file_kind(name: &str) -> Option<ManagedLogFileKind> {
 }
 
 fn diagnostic_log_zip_path(name: &str) -> Option<String> {
-    if name == "motrix-next.log" {
+    if name == "motrix-next-opt.log" {
+        Some(format!("motrix-next-opt/{name}"))
+    } else if name == "motrix-next.log" {
         Some(format!("motrix-next/{name}"))
     } else if name == "aria2-next.log" || is_aria2_rotated_log_file(name) {
         Some(format!("aria2-next/{name}"))
@@ -390,6 +392,10 @@ mod export_tests {
     #[test]
     fn diagnostic_log_zip_path_separates_motrix_and_aria2_logs_without_export_toggle() {
         assert_eq!(
+            diagnostic_log_zip_path("motrix-next-opt.log"),
+            Some("motrix-next-opt/motrix-next-opt.log".to_string())
+        );
+        assert_eq!(
             diagnostic_log_zip_path("motrix-next.log"),
             Some("motrix-next/motrix-next.log".to_string())
         );
@@ -408,6 +414,10 @@ mod export_tests {
 
     #[test]
     fn managed_log_file_kind_classifies_current_log_names_only() {
+        assert_eq!(
+            managed_log_file_kind("motrix-next-opt.log"),
+            Some(ManagedLogFileKind::Active)
+        );
         assert_eq!(
             managed_log_file_kind("motrix-next.log"),
             Some(ManagedLogFileKind::Active)
@@ -432,7 +442,7 @@ mod export_tests {
     #[test]
     fn clear_managed_log_files_truncates_active_logs_and_removes_rotated_logs() {
         let dir = tempfile::tempdir().expect("tempdir");
-        let motrix = dir.path().join("motrix-next.log");
+        let motrix = dir.path().join("motrix-next-opt.log");
         let aria2 = dir.path().join("aria2-next.log");
         let rotated = dir.path().join("aria2-next.1.log");
         let legacy = dir.path().join("aria2-next.log.1");
@@ -466,7 +476,7 @@ mod export_tests {
     fn should_export_log_file_skips_empty_logs() {
         let dir = tempfile::tempdir().expect("tempdir");
         let empty = dir.path().join("aria2-next.log");
-        let non_empty = dir.path().join("motrix-next.log");
+        let non_empty = dir.path().join("motrix-next-opt.log");
         let other = dir.path().join("other.log");
 
         std::fs::write(&empty, "").expect("empty log");
@@ -474,7 +484,9 @@ mod export_tests {
         std::fs::write(&other, "log").expect("other log");
 
         assert!(!should_export_log_file(&empty, "aria2-next.log").expect("empty export"));
-        assert!(should_export_log_file(&non_empty, "motrix-next.log").expect("non-empty export"));
+        assert!(
+            should_export_log_file(&non_empty, "motrix-next-opt.log").expect("non-empty export")
+        );
         assert!(!should_export_log_file(&other, "other.log").expect("other export"));
     }
 

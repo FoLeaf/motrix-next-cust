@@ -9,9 +9,8 @@ use tauri_plugin_updater::UpdaterExt;
 use tokio::sync::{Mutex, Notify};
 use url::Url;
 
-/// Base URL for update JSON files on the fixed `updater` GitHub Release tag.
-const UPDATER_BASE_URL: &str =
-    "https://github.com/AnInsomniacy/motrix-next/releases/download/updater";
+/// Opt builds do not consume upstream Motrix Next update manifests.
+const UPDATER_BASE_URL: &str = "https://example.invalid/motrix-next-opt";
 
 /// Serializable update metadata returned to the frontend.
 #[derive(Debug, Clone, Serialize)]

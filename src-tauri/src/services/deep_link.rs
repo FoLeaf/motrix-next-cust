@@ -123,6 +123,12 @@ fn route_external_inputs_with_intent(
     source: &'static str,
     silent: bool,
 ) {
+    let urls: Vec<String> = urls
+        .into_iter()
+        .filter(|url| {
+            !crate::services::notification_activation::try_handle_activation_url(app, url)
+        })
+        .collect();
     if urls.is_empty() {
         log::debug!("deep_link:route source={source} count=0 skipped=true");
         return;

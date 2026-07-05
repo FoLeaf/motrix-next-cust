@@ -1,11 +1,12 @@
 {
-  "name": "motrix-next",
+  "name": "motrix-next-opt",
   "private": true,
   "version": "3.9.7-beta.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
+    "build:opt": "pnpm build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,6 +16,7 @@
     "format": "prettier --write 'src/**/*.{ts,vue,css,json}'",
     "format:check": "prettier --check 'src/**/*.{ts,vue,css,json}'",
     "tauri": "tauri",
+    "tauri:build:opt:win": "pnpm tauri build --bundles nsis",
     "prepare": "husky"
   },
   "packageManager": "pnpm@11.5.2",

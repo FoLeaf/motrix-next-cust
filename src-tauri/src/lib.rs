@@ -35,7 +35,7 @@ use upnp::UpnpState;
 /// first-run users get full diagnostic output for bug reports.
 pub(crate) fn read_log_level() -> log::LevelFilter {
     (|| -> Option<log::LevelFilter> {
-        let data_dir = dirs::data_dir()?.join("com.motrix.next");
+        let data_dir = dirs::data_dir()?.join("com.motrix.next.opt");
         let store_path = data_dir.join("config.json");
         let content = std::fs::read_to_string(store_path).ok()?;
         let json: serde_json::Value = serde_json::from_str(&content).ok()?;
@@ -224,6 +224,7 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     // Runtime config cache — refreshed by frontend after each config save.
     app.manage(services::config::RuntimeConfigState::new());
+    app.manage(services::config::DownloadDefaultsState::new());
 
     // Background services — handles stored here so on_engine_ready can
     // stop old tasks before spawning new ones on restart.
@@ -232,6 +233,8 @@ fn setup_app(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     app.manage(services::monitor::TaskMonitorState::new());
     app.manage(services::aria2_events::Aria2EventState::new());
     app.manage(services::http_api::HttpApiState::new());
+    app.manage(services::extension_intake::IntakeEngineStartState::new());
+    app.manage(services::notification_activation::NotificationActivationState::new());
     #[cfg(target_os = "linux")]
     app.manage(services::notification::LinuxNotificationRegistry::new());
     app.manage(services::deep_link::PendingDeepLinkState::new());
@@ -656,7 +659,7 @@ pub fn run() {
     // Must run BEFORE tauri_plugin_sql to prevent panic on downgrade.
     // Uses the platform-specific app data directory (same path that
     // tauri_plugin_sql's "sqlite:history.db" resolves to).
-    if let Some(dir) = dirs::data_dir().map(|d| d.join("com.motrix.next")) {
+    if let Some(dir) = dirs::data_dir().map(|d| d.join("com.motrix.next.opt")) {
         db_guard::check(&dir);
     }
 
@@ -665,7 +668,7 @@ pub fn run() {
             tauri_plugin_log::Builder::new()
                 .targets([
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::LogDir {
-                        file_name: Some("motrix-next".into()),
+                        file_name: Some("motrix-next-opt".into()),
                     }),
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout),
                     tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Webview),

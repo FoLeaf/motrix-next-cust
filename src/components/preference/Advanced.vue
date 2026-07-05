@@ -273,7 +273,7 @@ async function loadPaths() {
   }
   try {
     const logDir = await appLogDir()
-    logPath.value = await join(logDir, 'motrix-next.log')
+    logPath.value = await join(logDir, 'motrix-next-opt.log')
   } catch (e) {
     logger.debug('Advanced.loadLogPath', e)
   }

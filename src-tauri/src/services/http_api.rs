@@ -23,15 +23,23 @@ use crate::error::AppError;
 use crate::services::config::{RuntimeConfigState, DEFAULT_EXTENSION_API_PORT};
 use crate::services::external_input::{self, ExternalDownloadInput, ExternalRequestHeader};
 use crate::services::port_guard;
+use crate::services::task_snapshot::{self, TaskSnapshot};
 use axum::{
-    extract::State,
+    extract::{
+        ws::{Message, WebSocket, WebSocketUpgrade},
+        ConnectInfo, State,
+    },
     http::{header, HeaderMap, Method, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Json, Router,
 };
+use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
+use std::path::Path;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_store::StoreExt;
 use tokio::sync::Mutex;
@@ -40,7 +48,7 @@ use tower_http::cors::CorsLayer;
 // ── Request / Response Types ────────────────────────────────────────
 
 /// POST /add request body from the browser extension.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct AddRequest {
     pub url: String,
     #[serde(rename = "finalUrl")]
@@ -101,6 +109,29 @@ pub struct ActionResponse {
     pub error: Option<String>,
 }
 
+/// POST /task-action request body from the progress popup.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskActionRequest {
+    pub gid: String,
+    pub action: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct WsAuthMessage {
+    #[serde(rename = "type")]
+    message_type: String,
+    token: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+enum WsServerEvent {
+    Snapshot { snapshot: TaskSnapshot },
+    Heartbeat { active: bool },
+    Error { message: &'static str },
+}
+
 // ── Auth Extraction ─────────────────────────────────────────────────
 
 /// Extract and validate the Bearer token from the Authorization header.
@@ -127,6 +158,30 @@ pub fn validate_bearer_token(headers: &HeaderMap, expected_secret: &str) -> Resu
     } else {
         log::warn!("http_api: 401 Unauthorized (invalid or missing Bearer token)");
         Err(StatusCode::UNAUTHORIZED)
+    }
+}
+
+/// Strict Bearer validation for progress and action endpoints.
+///
+/// Unlike legacy `/add` and `/stat`, an empty secret never disables auth here
+/// because these endpoints expose local paths or execute local file actions.
+pub fn validate_strict_bearer_token(
+    headers: &HeaderMap,
+    expected_secret: &str,
+) -> Result<(), StatusCode> {
+    if expected_secret.is_empty() {
+        log::warn!("http_api: 401 Unauthorized (extension API secret is empty)");
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+    validate_bearer_token(headers, expected_secret)
+}
+
+fn validate_loopback_peer(peer: SocketAddr) -> Result<(), StatusCode> {
+    if peer.ip().is_loopback() {
+        Ok(())
+    } else {
+        log::warn!("http_api: sensitive endpoint rejected non-loopback peer");
+        Err(StatusCode::FORBIDDEN)
     }
 }
 
@@ -161,6 +216,10 @@ pub fn build_router(ctx: Arc<ApiContext>) -> Router {
         .route("/add", post(handle_add))
         .route("/version", get(handle_version))
         .route("/stat", get(handle_stat))
+        .route("/tasks", get(handle_tasks))
+        .route("/task-action", post(handle_task_action))
+        .route("/window/show", post(handle_window_show))
+        .route("/events", get(handle_events))
         .route("/pause-all", post(handle_pause_all))
         .route("/resume-all", post(handle_resume_all))
         .layer(cors)
@@ -202,15 +261,14 @@ async fn handle_add(
         },
     );
 
-    // Route ALL downloads through the frontend — single code path.
-    //
-    // The frontend decides whether to show the AddTask dialog (autoSubmit=OFF)
-    // or auto-submit silently (autoSubmit=ON) based on the user's preference.
-    // Rust's only job: ensure the window exists, then emit.
-    //
-    // This unified path handles supported URL types (HTTP, magnet, local torrent)
-    // and all window states (normal, hidden, destroyed in lightweight mode).
-    route_to_frontend(&ctx.app, &body);
+    match crate::services::extension_intake::try_enqueue_direct(ctx.app.clone(), body.clone()).await
+    {
+        crate::services::extension_intake::IntakeDecision::AcceptedQueued => {}
+        crate::services::extension_intake::IntakeDecision::FallbackToFrontend { reason } => {
+            log::debug!("http_api: direct-intake fallback reason={reason:?}");
+            route_to_frontend(&ctx.app, &body);
+        }
+    }
     Ok(Json(AddResponse {
         action: "queued".to_string(),
         gid: None,
@@ -264,6 +322,103 @@ async fn handle_stat(
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+async fn handle_tasks(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(ctx): State<Arc<ApiContext>>,
+    headers: HeaderMap,
+) -> Result<Json<TaskSnapshot>, StatusCode> {
+    validate_loopback_peer(peer)?;
+    let secret = read_api_secret(&ctx.app);
+    validate_strict_bearer_token(&headers, &secret)?;
+
+    task_snapshot::fetch_task_snapshot(&ctx.app)
+        .await
+        .map(Json)
+        .map_err(|e| {
+            log::warn!("http_api: GET /tasks failed: {e}");
+            status_from_app_error(&e)
+        })
+}
+
+async fn handle_task_action(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(ctx): State<Arc<ApiContext>>,
+    headers: HeaderMap,
+    Json(body): Json<TaskActionRequest>,
+) -> Result<Json<ActionResponse>, StatusCode> {
+    validate_loopback_peer(peer)?;
+    let secret = read_api_secret(&ctx.app);
+    validate_strict_bearer_token(&headers, &secret)?;
+
+    let gid = body.gid.trim();
+    if gid.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let aria2 = ctx
+        .app
+        .try_state::<Aria2State>()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+
+    log::info!(
+        "http_api: POST /task-action action={} gid={gid}",
+        body.action
+    );
+
+    let result = match body.action.as_str() {
+        "pause" => aria2.0.force_pause(gid).await.map(|_| ()),
+        "resume" => aria2.0.unpause(gid).await.map(|_| ()),
+        "cancel" => cancel_task(&aria2, gid).await,
+        "open" => open_task_target(&ctx.app, &aria2, gid).await,
+        "showInFolder" => show_task_target_in_folder(&ctx.app, &aria2, gid).await,
+        _ => return Err(StatusCode::BAD_REQUEST),
+    };
+
+    match result {
+        Ok(()) => Ok(Json(ActionResponse {
+            status: "ok".to_string(),
+            error: None,
+        })),
+        Err(e) => Ok(Json(ActionResponse {
+            status: "error".to_string(),
+            error: Some(e.to_string()),
+        })),
+    }
+}
+
+async fn handle_window_show(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(ctx): State<Arc<ApiContext>>,
+    headers: HeaderMap,
+) -> Result<Json<ActionResponse>, StatusCode> {
+    validate_loopback_peer(peer)?;
+    let secret = read_api_secret(&ctx.app);
+    validate_strict_bearer_token(&headers, &secret)?;
+
+    match crate::tray::activate_main_window(&ctx.app, "extension-popup-show") {
+        crate::tray::WindowActivationOutcome::Activated => Ok(Json(ActionResponse {
+            status: "ok".to_string(),
+            error: None,
+        })),
+        crate::tray::WindowActivationOutcome::WindowUnavailable => Ok(Json(ActionResponse {
+            status: "error".to_string(),
+            error: Some("Window unavailable".to_string()),
+        })),
+    }
+}
+
+async fn handle_events(
+    ConnectInfo(peer): ConnectInfo<SocketAddr>,
+    State(ctx): State<Arc<ApiContext>>,
+    ws: WebSocketUpgrade,
+) -> Response {
+    if validate_loopback_peer(peer).is_err() {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    ws.on_upgrade(move |socket| handle_event_socket(ctx, socket))
+        .into_response()
 }
 
 /// POST /pause-all — pause all active downloads.
@@ -328,6 +483,157 @@ async fn handle_resume_all(
             error: Some(e.to_string()),
         })),
     }
+}
+
+async fn cancel_task(aria2: &tauri::State<'_, Aria2State>, gid: &str) -> Result<(), AppError> {
+    match aria2.0.force_remove(gid).await {
+        Ok(_) => {
+            let _ = aria2.0.remove_download_result(gid).await;
+            Ok(())
+        }
+        Err(first_error) => match aria2.0.remove_download_result(gid).await {
+            Ok(_) => Ok(()),
+            Err(_) => Err(first_error),
+        },
+    }
+}
+
+async fn open_task_target(
+    app: &AppHandle,
+    aria2: &tauri::State<'_, Aria2State>,
+    gid: &str,
+) -> Result<(), AppError> {
+    let task = aria2.0.tell_status(gid).await?;
+    let target = task_snapshot::resolve_task_target_path(&task)
+        .ok_or_else(|| AppError::NotFound("Task target path unavailable".into()))?;
+    let fallback = task.dir.clone();
+    let open_target = if Path::new(&target).exists() {
+        target
+    } else if !fallback.trim().is_empty() {
+        fallback
+    } else {
+        target
+    };
+    crate::commands::fs::open_path_normalized(app.clone(), open_target)
+}
+
+async fn show_task_target_in_folder(
+    app: &AppHandle,
+    aria2: &tauri::State<'_, Aria2State>,
+    gid: &str,
+) -> Result<(), AppError> {
+    let task = aria2.0.tell_status(gid).await?;
+    let target = task_snapshot::resolve_task_target_path(&task)
+        .ok_or_else(|| AppError::NotFound("Task target path unavailable".into()))?;
+    let fallback = task.dir.clone();
+    let show_target = if Path::new(&target).exists() {
+        target
+    } else if !fallback.trim().is_empty() {
+        fallback
+    } else {
+        target
+    };
+    if Path::new(&show_target).is_file() {
+        crate::commands::fs::show_item_in_dir(show_target)
+    } else {
+        crate::commands::fs::open_path_normalized(app.clone(), show_target)
+    }
+}
+
+async fn handle_event_socket(ctx: Arc<ApiContext>, socket: WebSocket) {
+    let secret = read_api_secret(&ctx.app);
+    if secret.is_empty() {
+        log::warn!("http_api: WS /events rejected because extension API secret is empty");
+        close_socket(socket).await;
+        return;
+    }
+
+    let (mut sender, mut receiver) = socket.split();
+    let auth_message = tokio::time::timeout(Duration::from_secs(10), receiver.next()).await;
+    let Ok(Some(Ok(Message::Text(text)))) = auth_message else {
+        log::warn!("http_api: WS /events auth timeout or invalid first message");
+        let _ = sender.send(Message::Close(None)).await;
+        return;
+    };
+    let Ok(auth) = serde_json::from_str::<WsAuthMessage>(&text) else {
+        log::warn!("http_api: WS /events auth JSON invalid");
+        let _ = sender.send(Message::Close(None)).await;
+        return;
+    };
+    if auth.message_type != "auth" || auth.token != secret {
+        log::warn!("http_api: WS /events unauthorized");
+        let _ = sender.send(Message::Close(None)).await;
+        return;
+    }
+
+    log::info!("http_api: WS /events connected");
+    let mut first = true;
+    loop {
+        let delay = match task_snapshot::fetch_task_snapshot(&ctx.app).await {
+            Ok(snapshot) => {
+                let active = snapshot.totals.num_active + snapshot.totals.num_waiting > 0;
+                let event = if active || snapshot.totals.has_error || first {
+                    WsServerEvent::Snapshot { snapshot }
+                } else {
+                    WsServerEvent::Heartbeat { active: false }
+                };
+                first = false;
+                if send_ws_event(&mut sender, &event).await.is_err() {
+                    break;
+                }
+                if active {
+                    Duration::from_secs(1)
+                } else {
+                    Duration::from_secs(15)
+                }
+            }
+            Err(e) => {
+                log::debug!("http_api: WS /events snapshot failed: {e}");
+                if send_ws_event(
+                    &mut sender,
+                    &WsServerEvent::Error {
+                        message: "engine-unavailable",
+                    },
+                )
+                .await
+                .is_err()
+                {
+                    break;
+                }
+                Duration::from_secs(15)
+            }
+        };
+
+        tokio::select! {
+            maybe_msg = receiver.next() => {
+                match maybe_msg {
+                    Some(Ok(Message::Close(_))) | None => break,
+                    Some(Ok(_)) => {}
+                    Some(Err(e)) => {
+                        log::debug!("http_api: WS /events receive failed: {e}");
+                        break;
+                    }
+                }
+            }
+            _ = tokio::time::sleep(delay) => {}
+        }
+    }
+    log::info!("http_api: WS /events disconnected");
+}
+
+async fn close_socket(socket: WebSocket) {
+    let (mut sender, _) = socket.split();
+    let _ = sender.send(Message::Close(None)).await;
+}
+
+async fn send_ws_event(
+    sender: &mut futures_util::stream::SplitSink<WebSocket, Message>,
+    event: &WsServerEvent,
+) -> Result<(), axum::Error> {
+    let text = serde_json::to_string(event).unwrap_or_else(|_| {
+        "{\"type\":\"error\",\"message\":\"serialization-failed\"}".to_string()
+    });
+    sender.send(Message::Text(text.into())).await
 }
 
 // ── Helper Functions ────────────────────────────────────────────────
@@ -491,6 +797,14 @@ fn summarize_url_for_log(value: &str) -> String {
         Err(_) => format!("parseable=false length={}", value.len()),
     }
 }
+
+fn status_from_app_error(error: &AppError) -> StatusCode {
+    match error {
+        AppError::Engine(_) | AppError::Aria2(_) => StatusCode::SERVICE_UNAVAILABLE,
+        AppError::NotFound(_) => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
 // ── Server Lifecycle ────────────────────────────────────────────────
 
 /// Handle for a running HTTP API server.  Allows graceful shutdown.
@@ -553,7 +867,11 @@ pub async fn spawn_http_api(
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel::<()>();
 
     let join_handle = tokio::spawn(async move {
-        let graceful = axum::serve(listener, router).with_graceful_shutdown(async {
+        let graceful = axum::serve(
+            listener,
+            router.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .with_graceful_shutdown(async {
             let _ = shutdown_rx.await;
         });
         if let Err(e) = graceful.await {
@@ -730,6 +1048,35 @@ mod tests {
         let mut headers = HeaderMap::new();
         headers.insert("authorization", HeaderValue::from_static("Bearer anything"));
         assert!(validate_bearer_token(&headers, "").is_ok());
+    }
+
+    #[test]
+    fn strict_auth_rejects_empty_secret_even_with_header() {
+        let mut headers = HeaderMap::new();
+        headers.insert("authorization", HeaderValue::from_static("Bearer anything"));
+        assert_eq!(
+            validate_strict_bearer_token(&headers, ""),
+            Err(StatusCode::UNAUTHORIZED)
+        );
+    }
+
+    #[test]
+    fn strict_auth_accepts_correct_secret() {
+        let mut headers = HeaderMap::new();
+        headers.insert("authorization", HeaderValue::from_static("Bearer progress"));
+        assert!(validate_strict_bearer_token(&headers, "progress").is_ok());
+    }
+
+    #[test]
+    fn sensitive_endpoints_accept_loopback_peer() {
+        let peer: std::net::SocketAddr = "127.0.0.1:50000".parse().unwrap();
+        assert!(validate_loopback_peer(peer).is_ok());
+    }
+
+    #[test]
+    fn sensitive_endpoints_reject_remote_peer() {
+        let peer: std::net::SocketAddr = "192.168.1.2:50000".parse().unwrap();
+        assert_eq!(validate_loopback_peer(peer), Err(StatusCode::FORBIDDEN));
     }
 
     // ── AddRequest deserialization ───────────────────────────────────

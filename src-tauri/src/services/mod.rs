@@ -16,21 +16,24 @@
 pub mod aria2_events;
 pub mod config;
 pub mod deep_link;
+pub mod extension_intake;
 pub mod external_input;
 pub mod frontend_action;
 pub mod http_api;
 pub mod monitor;
 pub mod notification;
+pub mod notification_activation;
 pub mod notification_i18n;
 pub mod port_guard;
 pub mod power;
 pub mod speed;
 pub mod stat;
+pub mod task_snapshot;
 
 use crate::aria2::client::Aria2State;
 use crate::engine::SUPPORTED_ENGINE_KEYS;
 use crate::error::AppError;
-use config::RuntimeConfigState;
+use config::{DownloadDefaultsState, RuntimeConfigState};
 use port_guard::DEFAULT_RPC_PORT;
 use tauri::Manager;
 use tauri_plugin_store::StoreExt;
@@ -119,13 +122,18 @@ pub async fn on_engine_ready(app: &tauri::AppHandle) -> Result<(), AppError> {
         aria2.0.update_credentials(port, secret).await;
     }
 
-    // 2. Refresh RuntimeConfig
-    if let Some(rc_state) = app.try_state::<RuntimeConfigState>() {
+    // 2. Refresh Rust-side configuration caches.
+    {
         let store = app
             .store("config.json")
             .map_err(|e| AppError::Store(format!("Failed to open config.json: {e}")))?;
         if let Some(prefs) = store.get("preferences") {
-            let _ = rc_state.refresh_from_json(&prefs).await;
+            if let Some(rc_state) = app.try_state::<RuntimeConfigState>() {
+                let _ = rc_state.refresh_from_json(&prefs).await;
+            }
+            if let Some(download_defaults) = app.try_state::<DownloadDefaultsState>() {
+                let _ = download_defaults.refresh_from_json(&prefs).await;
+            }
         }
     }
 

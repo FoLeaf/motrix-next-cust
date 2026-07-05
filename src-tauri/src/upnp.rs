@@ -27,7 +27,7 @@ const PERMANENT_LEASE_SECS: u32 = 0;
 const RENEWAL_INTERVAL: Duration = Duration::from_secs(1800);
 
 /// Description string embedded in the router's port mapping table.
-const MAPPING_DESC: &str = "Motrix Next";
+const MAPPING_DESC: &str = "Motrix Next Opt";
 
 // ─── Public State ────────────────────────────────────────────────────
 
@@ -429,7 +429,7 @@ mod tests {
     fn constants_are_sane() {
         assert_eq!(LEASE_DURATION_SECS, 3600);
         assert_eq!(RENEWAL_INTERVAL, Duration::from_secs(1800));
-        assert_eq!(MAPPING_DESC, "Motrix Next");
+        assert_eq!(MAPPING_DESC, "Motrix Next Opt");
         // Renewal interval must be less than lease duration
         assert!(RENEWAL_INTERVAL.as_secs() < u64::from(LEASE_DURATION_SECS));
     }

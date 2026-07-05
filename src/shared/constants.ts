@@ -382,10 +382,10 @@ export const DEFAULT_APP_CONFIG = {
   openAtLogin: false, // never auto-start on first install
   keepWindowState: false, // first launch has no saved state
 
-  autoHideWindow: false,
-  minimizeToTrayOnClose: false, // close=quit is default UX
+  autoHideWindow: true,
+  minimizeToTrayOnClose: true, // opt build defaults to background/tray operation
   hideDockOnMinimize: false, // macOS: hide Dock icon when minimized to tray
-  lightweightMode: false, // destroy WebView on minimize-to-tray to free ~300MB RAM
+  lightweightMode: true, // destroy WebView on minimize-to-tray to free ~300MB RAM
   showProgressBar: true,
   traySpeedometer: false, // opt-in: supported on macOS menu bar + Linux appindicator
   dockBadgeSpeed: true, // macOS Dock badge on by default
@@ -398,7 +398,7 @@ export const DEFAULT_APP_CONFIG = {
   resumeAllWhenAppLaunched: false, // don't flood bandwidth on launch
 
   // ── Auto Update ───────────────────────────────────────────────
-  autoCheckUpdate: true, // qBT checks every launch; security best practice
+  autoCheckUpdate: false, // opt builds must not update from upstream Motrix Next
   autoCheckUpdateInterval: 0, // 0 means every frontend startup, including lightweight restores
   /** Linux-only: DMA-BUF GPU rendering is opt-in for Wayland/WebKitGTK stability. */
   hardwareRendering: false,

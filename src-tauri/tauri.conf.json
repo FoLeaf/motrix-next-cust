@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "MotrixNext",
-  "identifier": "com.motrix.next",
+  "productName": "MotrixNextOpt",
+  "identifier": "com.motrix.next.opt",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Motrix Next",
+        "title": "Motrix Next Opt",
         "width": 1068,
         "height": 680,
         "minWidth": 373,
@@ -34,7 +34,7 @@
     "targets": "all",
     "publisher": "AnInsomniacy",
     "copyright": "Copyright © 2025 AnInsomniacy. All rights reserved.",
-    "createUpdaterArtifacts": true,
+    "createUpdaterArtifacts": false,
     "externalBin": ["binaries/motrix-next-engine"],
     "resources": [
       "binaries/aria2.conf",
@@ -102,12 +102,12 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://github.com/AnInsomniacy/motrix-next/releases/download/updater/latest.json"],
+      "endpoints": ["https://example.invalid/motrix-next-opt/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2MjEwNDUzQTk3OUM2NDUKUldSRnhubXBVd1FoZHUxeWtoRGJFblZaZ3V3UWZMQTYwL29CQTNySWxQMForTDA2YjN1Mk50Sk4K"
     },
     "deep-link": {
       "desktop": {
-        "schemes": ["magnet", "ed2k", "thunder", "motrixnext"]
+        "schemes": ["magnet", "ed2k", "thunder", "motrixnext", "motrixnextopt"]
       }
     },
     "sql": {
