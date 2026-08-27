@@ -6,7 +6,7 @@ use crate::log_policy::{
 use serde::Deserialize;
 use serde_json::Value;
 use std::path::Path;
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 fn diagnostic_log_zip_path(name: &str) -> Option<String> {
     if name == "motrix-next-opt.log" {
         Some(format!("motrix-next-opt/{name}"))
