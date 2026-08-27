@@ -36,13 +36,14 @@
     "copyright": "Copyright © 2025 AnInsomniacy. All rights reserved.",
     "createUpdaterArtifacts": false,
     "externalBin": ["binaries/motrix-next-engine"],
-    "resources": [
-      "binaries/aria2.conf",
-      "data/ed2k-bootstrap/server.met",
-      "data/ed2k-bootstrap/nodes.dat",
-      "data/bt-peer-blocklist.txt",
-      "data/dbip-country-lite.mmdb"
-    ],
+    "resources": {
+      "binaries/aria2.conf": "binaries/aria2.conf",
+      "binaries/WebView2Loader.dll": "WebView2Loader.dll",
+      "data/ed2k-bootstrap/server.met": "data/ed2k-bootstrap/server.met",
+      "data/ed2k-bootstrap/nodes.dat": "data/ed2k-bootstrap/nodes.dat",
+      "data/bt-peer-blocklist.txt": "data/bt-peer-blocklist.txt",
+      "data/dbip-country-lite.mmdb": "data/dbip-country-lite.mmdb"
+    },
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
     "fileAssociations": [
       {
