@@ -904,12 +904,14 @@ mod tests {
 
     // ── normalize_path ─────────────────────────────────────────────────
 
+    #[cfg(unix)]
     #[test]
     fn normalize_path_preserves_simple_unix_path() {
         let result = normalize_path("/home/user/downloads/file.txt");
         assert_eq!(result, "/home/user/downloads/file.txt");
     }
 
+    #[cfg(unix)]
     #[test]
     fn normalize_path_preserves_path_with_spaces() {
         let result = normalize_path("/home/user/my downloads/file name.txt");
@@ -952,6 +954,7 @@ mod tests {
         assert_eq!(result, "\\\\server\\share\\file.txt");
     }
 
+    #[cfg(unix)]
     #[test]
     fn normalize_path_handles_forward_slash_only() {
         // Pure forward-slash paths (cross-platform compatible)
