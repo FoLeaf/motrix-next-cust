@@ -601,11 +601,11 @@ fn reveal_in_explorer(path: &str) -> Result<(), AppError> {
     // `\\?\UNC\server\share\file` → `\\server\share\file`
     // This is the fix for GitHub issue #3304.
     let path_str = canonical.to_string_lossy();
-    let fixed: PathBuf = if path_str.starts_with(r"\\?\UNC\") {
-        PathBuf::from(format!(r"\\{}", &path_str[r"\\?\UNC\".len()..]))
-    } else if path_str.starts_with(r"\\?\") {
+    let fixed: PathBuf = if let Some(unc_path) = path_str.strip_prefix(r"\\?\UNC\") {
+        PathBuf::from(format!(r"\\{unc_path}"))
+    } else if let Some(stripped) = path_str.strip_prefix(r"\\?\") {
         // Shouldn't happen (dunce handles this), but defensive
-        PathBuf::from(&path_str[r"\\?\".len()..])
+        PathBuf::from(stripped)
     } else {
         canonical.clone()
     };

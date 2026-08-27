@@ -8,7 +8,10 @@
 use crate::error::AppError;
 
 const DOWNLOAD_REASON: &str = "Active downloads in progress";
+// Only the keepawake backend (non-Windows) identifies itself by these.
+#[cfg_attr(windows, allow(dead_code))]
 const APP_NAME: &str = "Motrix Next Opt";
+#[cfg_attr(windows, allow(dead_code))]
 const APP_REVERSE_DOMAIN: &str = "com.motrix.next.opt";
 
 pub struct PowerGuard {
