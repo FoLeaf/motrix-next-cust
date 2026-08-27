@@ -23,11 +23,26 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      # Pin the MSVC target explicitly so the static WebView2Loader link
+      # mode (target_env = "msvc") is guaranteed regardless of host default.
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
 
       - uses: swatinem/rust-cache@v2
 
       - run: pnpm install
+
+      # Drop any stale linked app binaries from the cache so the installer
+      # always packages an exe built from the checked-out sources.
+      - name: Clean stale app artifacts
+        shell: bash
+        run: |
+          cd src-tauri
+          cargo clean --release --package motrix-next-opt || true
+          rm -rf target/release/motrix-next-opt.exe target/release/motrix_next_lib.dll
+          rm -rf target/x86_64-pc-windows-msvc/release/motrix-next-opt.exe \
+                 target/x86_64-pc-windows-msvc/release/motrix_next_lib.dll
 
       - uses: tauri-apps/tauri-action@v0
         id: tauri
