@@ -183,11 +183,17 @@ pub struct DownloadDefaults {
     pub user_agent_rules: Vec<serde_json::Value>,
     #[serde(default)]
     pub proxy: DownloadProxyDefaults,
+    /// Notification switches duplicated from downloadDefaults in the WebView
+    /// settings schema; kept so saved configs parse even though the native
+    /// side reads the top-level equivalents instead.
     #[serde(default = "default_true")]
+    #[allow(dead_code)]
     pub task_notification: bool,
     #[serde(default = "default_true")]
+    #[allow(dead_code)]
     pub notify_on_start: bool,
     #[serde(default = "default_true")]
+    #[allow(dead_code)]
     pub notify_on_complete: bool,
 }
 

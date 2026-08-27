@@ -85,6 +85,7 @@ pub fn resolve_open_target_for_event(event: &TaskEvent) -> Option<String> {
     resolve_open_target(event)
 }
 
+#[cfg_attr(not(windows), allow(dead_code))]
 pub fn build_activation_url(token: &str, action: NotificationActivationAction) -> String {
     format!(
         "motrixnextopt://open-download/{}/{}",

@@ -9,31 +9,9 @@ permissions:
   contents: write
 
 jobs:
+  # Custom build targets Windows x86_64 only.
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-15
-            args: --target aarch64-apple-darwin
-            label: macos-aarch64
-          - platform: macos-15-intel
-            args: --target x86_64-apple-darwin
-            label: macos-x86_64
-          - platform: windows-2025-vs2026
-            args: --target x86_64-pc-windows-msvc --bundles nsis
-            label: windows-x86_64
-          - platform: windows-2025-vs2026
-            args: --target aarch64-pc-windows-msvc --bundles nsis
-            label: windows-aarch64
-          - platform: ubuntu-22.04
-            args: --target x86_64-unknown-linux-gnu
-            label: linux-x86_64
-          - platform: ubuntu-22.04-arm
-            args: --target aarch64-unknown-linux-gnu
-            label: linux-aarch64
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-2025-vs2026
 
     steps:
       - uses: actions/checkout@v6
@@ -47,30 +25,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # Cross-compilation: add the secondary Rust target when building for
-      # a different architecture on the same OS runner.
-      # - macOS x86_64 uses a native Intel runner (macos-13), no cross-compile needed.
-      # - Windows ARM64 cross-compiles on x64 runner (NSIS is arch-agnostic).
-      - name: Add cross-compilation target
-        if: contains(matrix.args, 'aarch64-pc-windows-msvc')
-        shell: bash
-        run: |
-          TARGET=$(echo '${{ matrix.args }}' | sed 's/.*--target \([^ ]*\).*/\1/')
-          rustup target add "$TARGET"
-
       - uses: swatinem/rust-cache@v2
-
-      # Suppress needrestart daemon (auto-restarts services on package
-      # install, can kill the runner agent and cause "operation canceled").
-      - name: Install Linux dependencies
-        if: runner.os == 'Linux'
-        run: |
-          export NEEDRESTART_SUSPEND=1
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo -E apt-get install -y \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev patchelf xdg-utils
 
       - run: pnpm install
 
@@ -84,13 +39,13 @@ jobs:
           tagName: ${{ github.event.release.tag_name || '' }}
           releaseId: ${{ github.event_name == 'release' && github.event.release.id || '' }}
           includeUpdaterJson: false
-          args: ${{ matrix.args }}
+          args: --target x86_64-pc-windows-msvc --bundles nsis
 
       - name: Upload build artifacts (manual trigger only)
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
-          name: motrix-next-${{ matrix.label }}
+          name: motrix-next-windows-x86_64
           path: "${{ join(fromJSON(steps.tauri.outputs.artifactPaths), '\n') }}"
           retention-days: 7
 
@@ -107,77 +62,3 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           ./.github/scripts/refresh-updater-json.sh "${{ github.event.release.tag_name }}"
-
-  update-homebrew:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'release' && !github.event.release.prerelease
-
-    steps:
-      - name: Download macOS artifacts and compute checksums
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ github.event.release.tag_name }}"
-          VERSION="${TAG#v}"
-
-          gh release download "$TAG" \
-            -R "${{ github.repository }}" \
-            -p "MotrixNext_aarch64.app.tar.gz" \
-            -p "MotrixNext_x64.app.tar.gz"
-
-          ARM_SHA=$(shasum -a 256 MotrixNext_aarch64.app.tar.gz | cut -d ' ' -f1)
-          INTEL_SHA=$(shasum -a 256 MotrixNext_x64.app.tar.gz | cut -d ' ' -f1)
-
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          echo "ARM_SHA=$ARM_SHA" >> "$GITHUB_ENV"
-          echo "INTEL_SHA=$INTEL_SHA" >> "$GITHUB_ENV"
-
-      - name: Update Homebrew Cask
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-        run: |
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/AnInsomniacy/homebrew-motrix-next.git"
-          cd homebrew-motrix-next
-
-          # Generate the entire cask file from a template instead of using
-          # fragile sed replacements. Shell expands $VERSION, $ARM_SHA, and
-          # $INTEL_SHA; Ruby interpolations (#{version}, #{arch}) pass through
-          # literally because #{ is not shell syntax.
-          cat > Casks/motrix-next.rb << CASK_EOF
-          cask "motrix-next" do
-            arch arm: "aarch64", intel: "x64"
-
-            version "$VERSION"
-            sha256 arm:   "$ARM_SHA",
-                   intel: "$INTEL_SHA"
-
-            url "https://github.com/AnInsomniacy/motrix-next/releases/download/v#{version}/MotrixNext_#{arch}.app.tar.gz"
-            name "Motrix Next"
-            desc "Full-featured download manager built with Tauri"
-            homepage "https://github.com/AnInsomniacy/motrix-next"
-
-            livecheck do
-              url :url
-              strategy :github_latest
-            end
-
-            auto_updates true
-
-            app "MotrixNext.app"
-
-            zap trash: [
-              "~/Library/Application Support/com.motrix.next",
-              "~/Library/Caches/com.motrix.next",
-              "~/Library/Logs/com.motrix.next",
-              "~/Library/WebKit/com.motrix.next",
-            ]
-          end
-          CASK_EOF
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Casks/motrix-next.rb
-          git diff --cached --quiet && echo "No changes to commit" && exit 0
-          git commit -m "motrix-next $VERSION"
-          git push

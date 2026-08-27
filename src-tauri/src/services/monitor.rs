@@ -356,6 +356,7 @@ impl TaskNotifier {
     ///
     /// Suppresses callbacks during the first scan to avoid ghost
     /// notifications for pre-existing terminal tasks.
+    #[cfg(test)]
     pub fn scan(&mut self, tasks: &[Aria2Task]) -> Vec<(String, TaskEvent)> {
         self.scan_with_initial_recent_births(tasks, &HashSet::new())
     }

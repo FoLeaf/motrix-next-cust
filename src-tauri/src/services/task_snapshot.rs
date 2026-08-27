@@ -102,6 +102,7 @@ pub async fn fetch_task_snapshot(app: &tauri::AppHandle) -> Result<TaskSnapshot,
     Ok(TaskSnapshot { totals, tasks })
 }
 
+#[cfg(test)]
 pub fn snapshot_item_from_task(task: &Aria2Task) -> TaskSnapshotItem {
     snapshot_item_from_task_with_added_at(task, None)
 }

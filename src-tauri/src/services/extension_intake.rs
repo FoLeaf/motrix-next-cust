@@ -479,7 +479,10 @@ fn is_valid_aria2_proxy_url(value: &str) -> bool {
 
 fn resolve_submitted_task_name(url: &str) -> String {
     if let Ok(parsed) = url::Url::parse(url) {
-        if let Some(segment) = parsed.path_segments().and_then(|segments| segments.last()) {
+        if let Some(segment) = parsed
+            .path_segments()
+            .and_then(|mut segments| segments.next_back())
+        {
             let decoded = urlencoding::decode(segment)
                 .map(|value| value.to_string())
                 .unwrap_or_else(|_| segment.to_string());
