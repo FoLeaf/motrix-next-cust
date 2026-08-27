@@ -176,16 +176,21 @@ fn dispatch_for_action(
 }
 
 fn parse_activation_token(url: &url::Url) -> Option<String> {
-    let mut path_segments = url.path_segments()?;
-    let _action = path_segments.next();
-    if let Some(token) = path_segments.next().filter(|value| !value.is_empty()) {
-        return urlencoding::decode(token)
-            .ok()
-            .map(|value| value.to_string());
-    }
+    // path_segments() yields None for non-special URLs with an empty path
+    // (e.g. legacy "scheme://host?token=..." forms), so fall through to the
+    // query pair lookup instead of propagating that early.
+    let path_token = url.path_segments().and_then(|mut segments| {
+        segments.next();
+        segments
+            .next()
+            .filter(|value| !value.is_empty())
+            .and_then(|value| urlencoding::decode(value).ok().map(String::from))
+    });
 
-    url.query_pairs()
-        .find_map(|(key, value)| (key == "token").then(|| value.to_string()))
+    path_token.or_else(|| {
+        url.query_pairs()
+            .find_map(|(key, value)| (key == "token").then(|| value.to_string()))
+    })
 }
 
 fn parse_activation_action(url: &url::Url) -> NotificationActivationAction {

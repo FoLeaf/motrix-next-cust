@@ -42,7 +42,9 @@ jobs:
 
   backend:
     name: Backend Quality
-    runs-on: ubuntu-24.04
+    # Custom build targets Windows x86_64 only; run Rust quality gates on
+    # the same platform so path-handling and cfg(windows) code are covered.
+    runs-on: windows-2025-vs2026
     steps:
       - uses: actions/checkout@v6
 
@@ -51,17 +53,6 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-
-      # Suppress Ubuntu 24.04 needrestart daemon (auto-restarts services on
-      # package install, can kill the runner agent and cause "operation canceled").
-      - name: Install system dependencies
-        run: |
-          export NEEDRESTART_SUSPEND=1
-          export DEBIAN_FRONTEND=noninteractive
-          sudo apt-get update
-          sudo -E apt-get install -y \
-            libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
-            librsvg2-dev patchelf
 
       - uses: pnpm/action-setup@v6
 
