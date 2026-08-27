@@ -559,6 +559,7 @@ pub(crate) fn normalize_path(raw: &str) -> String {
 /// platforms — macOS uses `NSWorkspace`, Linux uses D-Bus FileManager1).
 #[tauri::command]
 pub fn show_item_in_dir(path: String) -> Result<(), AppError> {
+    prime_foreground_activation();
     let normalized = normalize_path(&path);
     log::debug!("show_item_in_dir: original={path:?} normalized={normalized:?}");
     reveal_in_explorer(&normalized)
@@ -701,10 +702,34 @@ fn to_wide(s: &str) -> Vec<u16> {
 /// Opens a file or directory with the system's default application.
 ///
 /// Normalizes the path before calling the opener to handle mixed separators.
+/// Windows foreground-activation gate for open/reveal actions.
+///
+/// Windows only lets a process bring a newly launched window to the
+/// foreground when that process recently received user input. When the
+/// trigger arrives over the local HTTP API (browser-extension popup), the
+/// user's click belongs to the browser, so the opened file/folder window
+/// starts silently behind the foreground app. Injecting one no-op Shift
+/// press+release marks this process as the most recent input recipient;
+/// a lone Shift produces no text and is invisible to the user.
+#[cfg(windows)]
+fn prime_foreground_activation() {
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+        keybd_event, KEYEVENTF_KEYUP, VK_SHIFT,
+    };
+    unsafe {
+        keybd_event(VK_SHIFT as u8, 0, 0, 0);
+        keybd_event(VK_SHIFT as u8, 0, KEYEVENTF_KEYUP, 0);
+    }
+}
+
+#[cfg(not(windows))]
+fn prime_foreground_activation() {}
+
 /// Counterpart to [`show_item_in_dir`] — used when the target is a directory
 /// (opens in file manager) or a file (opens with default app).
 #[tauri::command]
 pub fn open_path_normalized(app: AppHandle, path: String) -> Result<(), AppError> {
+    prime_foreground_activation();
     use tauri_plugin_opener::OpenerExt;
     log::debug!("file:open path={path:?}");
     let normalized = normalize_path(&path);
