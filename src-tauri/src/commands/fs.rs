@@ -713,9 +713,7 @@ fn to_wide(s: &str) -> Vec<u16> {
 /// a lone Shift produces no text and is invisible to the user.
 #[cfg(windows)]
 fn prime_foreground_activation() {
-    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-        keybd_event, KEYEVENTF_KEYUP, VK_SHIFT,
-    };
+    use windows_sys::Win32::UI::Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP, VK_SHIFT};
     unsafe {
         keybd_event(VK_SHIFT as u8, 0, 0, 0);
         keybd_event(VK_SHIFT as u8, 0, KEYEVENTF_KEYUP, 0);
