@@ -2,97 +2,85 @@
  * @fileoverview Design tokens following Material Design 3 tonal surface system.
  *
  * Seed color: #E0A422 (Amber Gold)
- * Architecture: M3 semantic tokens → legacy alias layer → component consumption
- *
- * Naming: --m3-{role} for M3 tokens, --{legacy} aliased to M3 tokens.
- * Light values in :root, dark overrides in .dark class.
+ * Runtime values are generated from the selected seed by Material Color Utilities.
+ * These values provide the matching first-paint fallback before Vue mounts.
  */
 
 /* ── Light Theme (default) ─────────────────────────────────────────── */
 :root {
   /* ── M3 Surface Tonal System ───────────────────────────────────── */
-  --m3-surface: #fefbf6;
-  --m3-surface-dim: #dfdbd4;
-  --m3-surface-container-lowest: #ffffff;
-  --m3-surface-container-low: #f9f5ee;
-  --m3-surface-container: #f3efe8;
-  --m3-surface-container-high: #ede9e2;
-  --m3-surface-container-highest: #e7e3dd;
+  --m3-surface: #fffbff;
+  --m3-surface-dim: #d8d0c8;
+  --m3-surface-container-lowest: #fff8f3;
+  --m3-surface-container-low: #f5ece4;
+  --m3-surface-container: #ece4db;
+  --m3-surface-container-high: #e4dbd3;
+  --m3-surface-container-highest: #dbd3cb;
 
   /* ── M3 On-Surface / Text ──────────────────────────────────────── */
-  --m3-on-surface: #1d1b16;
-  --m3-on-surface-variant: #4d4639;
+  --m3-on-surface: #1f1b16;
+  --m3-on-surface-variant: #4e4639;
 
   /* ── M3 Outline / Borders ──────────────────────────────────────── */
-  --m3-outline: #7f7667;
-  --m3-outline-variant: #d1c7b7;
+  --m3-outline: #807667;
+  --m3-outline-variant: #d1c5b4;
 
   /* ── M3 Primary (Amber Gold) ───────────────────────────────────── */
   --m3-primary: #7c5800;
   --m3-on-primary: #ffffff;
-  --m3-primary-container: #ffdea3;
+  --m3-primary-container: #ffdea8;
   --m3-on-primary-container: #271900;
 
-  /* ── M3 Error ──────────────────────────────────────────────────── */
-  --m3-error: #ba1a1a;
+  /* ── M3 Info (harmonized extended color) ──────────────────────── */
+  --m3-info: #00658f;
+  --m3-on-info: #ffffff;
+  --m3-info-container: #c7e7ff;
+  --m3-on-info-container: #001e2e;
+
+  /* ── M3 Error (theme-weighted extended color) ─────────────────── */
+  --m3-error: #a63b00;
   --m3-on-error: #ffffff;
-  --m3-error-container: #ffdad6;
+  --m3-error-container: #ffdbce;
+  --m3-on-error-container: #370e00;
 
   /* ── M3 Success (Extended) ─────────────────────────────────────── */
-  --m3-success: #386a20;
+  --m3-success: #516600;
   --m3-on-success: #ffffff;
+  --m3-success-container: #d3ee80;
+  --m3-on-success-container: #161e00;
 
   /* ── M3 Tertiary (Green-gray — special operations) ──────────────── */
-  --m3-tertiary: #4a6547;
+  --m3-tertiary: #4d6544;
   --m3-on-tertiary: #ffffff;
-  --m3-tertiary-container: rgba(74, 101, 71, 0.12);
+  --m3-tertiary-container: #cfebc1;
+  --m3-on-tertiary-container: #0b2006;
 
-  /* ── M3 Warning (maps to Primary for amber brand) ──────────────── */
+  /* ── M3 Warning (harmonized extended color) ───────────────────── */
   --m3-warning: #7c5800;
   --m3-on-warning: #ffffff;
+  --m3-warning-container: #ffdea7;
+  --m3-on-warning-container: #271900;
 
   /* ── M3 Inverse ────────────────────────────────────────────────── */
-  --m3-inverse-surface: #32302b;
-  --m3-on-inverse-surface: #ebe4db;
+  --m3-inverse-surface: #34302a;
+  --m3-on-inverse-surface: #f8efe7;
 
   /* ── M3 Scrollbar ──────────────────────────────────────────────── */
-  --m3-scrollbar-thumb: rgba(29, 27, 22, 0.3);
-  --m3-scrollbar-thumb-inactive: rgba(29, 27, 22, 0.15);
+  --m3-scrollbar-thumb: color-mix(in srgb, var(--m3-on-surface) 24%, transparent);
+  --m3-scrollbar-thumb-inactive: color-mix(in srgb, var(--m3-on-surface) 12%, transparent);
 
   /* ── M3 Shadow ─────────────────────────────────────────────────── */
   --m3-shadow: rgba(0, 0, 0, 0.15);
 
   /* ── M3 Status Colors (semantic) ────────────────────────────────── */
   --m3-status-active: #7c5800;
-  --m3-status-waiting: #7c5800;
-  --m3-status-paused: #7f7667;
-  --m3-status-error: #ba1a1a;
-  --m3-status-success: #386a20;
-
-  /* ── M3 Container Backgrounds (tinted surfaces) ────────────────── */
-  --m3-primary-container-bg: rgba(124, 88, 0, 0.1);
-  --m3-error-container-bg: rgba(186, 26, 26, 0.08);
+  --m3-status-waiting: #00658f;
+  --m3-status-paused: #807667;
+  --m3-status-error: #a63b00;
+  --m3-status-success: #516600;
 
   /* ── M3 Drop Zone ──────────────────────────────────────────────── */
   --m3-drop-zone-border: var(--m3-outline-variant);
-  --m3-drop-zone-active-border: var(--m3-primary);
-  --m3-drop-zone-bg: color-mix(in srgb, var(--m3-on-surface) 4%, transparent);
-
-  /* ── Brand Color (backward-compatible) ─────────────────────────── */
-  --color-primary: #e0a422;
-  --color-primary-hover: #c89319;
-  --color-primary-light-5: #f0d291;
-  --color-primary-light-9: #faf3e0;
-
-  /* ── Legacy Aliases → M3 Tokens ────────────────────────────────── */
-  --color-text-primary: var(--m3-on-surface);
-  --color-text-regular: var(--m3-on-surface-variant);
-  --color-text-secondary: var(--m3-outline);
-  --color-text-placeholder: var(--m3-outline-variant);
-
-  --border-color-base: var(--m3-outline-variant);
-  --border-color-light: var(--m3-outline-variant);
-  --border-color-lighter: #ebeef5;
 
   --aside-bg: var(--m3-surface-container-highest);
   --aside-icon-hover-bg: color-mix(in srgb, var(--m3-on-surface) 8%, transparent);
@@ -100,28 +88,24 @@
   --subnav-bg: var(--m3-surface-container);
   --subnav-title: var(--m3-on-surface);
   --subnav-text: var(--m3-on-surface-variant);
-  --subnav-active-text: var(--color-primary);
-  --subnav-active-bg: var(--m3-surface-container-highest);
+  --subnav-active-text: var(--m3-on-surface);
+  --subnav-active-bg: color-mix(in srgb, var(--m3-primary) 10%, var(--m3-surface-container-highest));
 
   --main-bg: var(--m3-surface-container-low);
   --panel-title: var(--m3-on-surface);
   --panel-border: var(--m3-outline-variant);
 
   --task-item-bg: var(--m3-surface-container-lowest);
-  --task-item-hover-border: var(--color-primary);
+  --task-item-hover-border: var(--m3-primary);
   --task-action-bg: var(--m3-surface-container-lowest);
 
   --about-card-bg: var(--m3-surface-container-lowest);
   --about-card-hover-bg: var(--m3-surface-container-high);
 
-  /* macOS traffic light — inactive (unfocused) */
-  --tl-inactive: #d4d4d4;
-
   /* ── Layout ────────────────────────────────────────────────────── */
   --aside-width: 78px;
   --subnav-width: 210px;
   --subnav-width-compact: 64px;
-  --titlebar-height: 0px;
 
   /* Unified top offset for the three-column header row (sidebar logo,
      subnav title, content title).  Sized to clear the macOS traffic-
@@ -137,98 +121,91 @@
   --font-size-base: 14px;
   --font-size-sm: 13px;
   --font-size-xs: 12px;
-  --font-size-lg: 16px;
   --border-radius: 6px;
   --transition-all: all 0.2s cubic-bezier(0.2, 0, 0, 1);
-  --transition-fast: 0.15s cubic-bezier(0.2, 0, 0, 1);
-  --transition-border: border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ── Dark Theme ────────────────────────────────────────────────────── */
 .dark {
   /* ── M3 Surface Tonal System ───────────────────────────────────── */
-  --m3-surface: #141210;
-  --m3-surface-dim: #141210;
-  --m3-surface-container-lowest: #0e0d0b;
-  --m3-surface-container-low: #1c1a17;
-  --m3-surface-container: #201e1b;
-  --m3-surface-container-high: #2b2926;
-  --m3-surface-container-highest: #363331;
+  --m3-surface: #1f1b16;
+  --m3-surface-dim: #16130e;
+  --m3-surface-container-lowest: #110e09;
+  --m3-surface-container-low: #1f1b16;
+  --m3-surface-container: #231f1a;
+  --m3-surface-container-high: #2d2924;
+  --m3-surface-container-highest: #38342e;
 
   /* ── M3 On-Surface / Text ──────────────────────────────────────── */
-  --m3-on-surface: #e8e2d9;
-  --m3-on-surface-variant: #d0c8b9;
+  --m3-on-surface: #eae1d9;
+  --m3-on-surface-variant: #d1c5b4;
 
   /* ── M3 Outline / Borders ──────────────────────────────────────── */
-  --m3-outline: #998f80;
-  --m3-outline-variant: #4d4639;
+  --m3-outline: #9a8f80;
+  --m3-outline-variant: #4e4639;
 
   /* ── M3 Primary (Amber Gold — lighter in dark) ─────────────────── */
-  --m3-primary: #f0bf48;
-  --m3-on-primary: #412d00;
+  --m3-primary: #fbbc3b;
+  --m3-on-primary: #422d00;
   --m3-primary-container: #5e4200;
-  --m3-on-primary-container: #ffdea3;
+  --m3-on-primary-container: #ffdea8;
 
-  /* ── M3 Error ──────────────────────────────────────────────────── */
-  --m3-error: #ffb4ab;
-  --m3-on-error: #690005;
-  --m3-error-container: #93000a;
+  /* ── M3 Info (harmonized extended color) ──────────────────────── */
+  --m3-info: #86cfff;
+  --m3-on-info: #00344c;
+  --m3-info-container: #004c6d;
+  --m3-on-info-container: #c7e7ff;
+
+  /* ── M3 Error (theme-weighted extended color) ─────────────────── */
+  --m3-error: #ffb599;
+  --m3-on-error: #5a1c00;
+  --m3-error-container: #7f2b00;
+  --m3-on-error-container: #ffdbce;
 
   /* ── M3 Success (Extended — lighter in dark) ────────────────────── */
-  --m3-success: #8edb6a;
-  --m3-on-success: #0a3900;
+  --m3-success: #b7d167;
+  --m3-on-success: #293500;
+  --m3-success-container: #3c4d00;
+  --m3-on-success-container: #d3ee80;
 
   /* ── M3 Tertiary (Green-gray — lighter in dark) ─────────────────── */
-  --m3-tertiary: #a1d09a;
-  --m3-on-tertiary: #0d3a0a;
-  --m3-tertiary-container: rgba(161, 208, 154, 0.15);
+  --m3-tertiary: #b3cea6;
+  --m3-on-tertiary: #203619;
+  --m3-tertiary-container: #364d2e;
+  --m3-on-tertiary-container: #cfebc1;
 
   /* ── M3 Warning ────────────────────────────────────────────────── */
-  --m3-warning: #f0bf48;
+  --m3-warning: #f7bd48;
   --m3-on-warning: #412d00;
+  --m3-warning-container: #5e4200;
+  --m3-on-warning-container: #ffdea7;
 
   /* ── M3 Inverse ────────────────────────────────────────────────── */
-  --m3-inverse-surface: #e8e2d9;
-  --m3-on-inverse-surface: #32302b;
+  --m3-inverse-surface: #eae1d9;
+  --m3-on-inverse-surface: #34302a;
 
   /* ── M3 Scrollbar ──────────────────────────────────────────────── */
-  --m3-scrollbar-thumb: rgba(232, 226, 217, 0.22);
-  --m3-scrollbar-thumb-inactive: rgba(232, 226, 217, 0.1);
+  --m3-scrollbar-thumb: color-mix(in srgb, var(--m3-on-surface) 24%, transparent);
+  --m3-scrollbar-thumb-inactive: color-mix(in srgb, var(--m3-on-surface) 12%, transparent);
 
   /* ── M3 Shadow ─────────────────────────────────────────────────── */
   --m3-shadow: rgba(0, 0, 0, 0.5);
 
   /* ── M3 Status Colors (semantic — lighter in dark) ──────────────── */
-  --m3-status-active: #f0bf48;
-  --m3-status-waiting: #f0bf48;
-  --m3-status-paused: #998f80;
-  --m3-status-error: #ffb4ab;
-  --m3-status-success: #8edb6a;
-
-  /* ── M3 Container Backgrounds (tinted surfaces — dark) ─────────── */
-  --m3-primary-container-bg: rgba(240, 191, 72, 0.12);
-  --m3-error-container-bg: rgba(255, 180, 171, 0.08);
-
-  /* ── Brand Color (consistent across themes) ────────────────────── */
-  --color-primary-light-5: #5e4200;
-  --color-primary-light-9: #271900;
-
-  /* ── Legacy Overrides (dark-specific) ──────────────────────────── */
-  --border-color-lighter: #3a3730;
+  --m3-status-active: #fbbc3b;
+  --m3-status-waiting: #86cfff;
+  --m3-status-paused: #9a8f80;
+  --m3-status-error: #ffb599;
+  --m3-status-success: #b7d167;
 
   --aside-bg: var(--m3-surface-container-lowest);
   --aside-icon-hover-bg: color-mix(in srgb, var(--m3-on-surface) 12%, transparent);
-
-  --subnav-active-text: #fff;
 
   /* ── Dark gradient: aside(darkest) → subnav(dark) → main(lighter) ── */
   --subnav-bg: var(--m3-surface-container-low);
   --main-bg: var(--m3-surface-container-high);
   --task-item-bg: var(--m3-surface-container);
   --task-action-bg: var(--m3-surface-container);
-
-  /* macOS traffic light — inactive (unfocused) */
-  --tl-inactive: #4a4a4a;
 
   --about-card-bg: var(--m3-surface-container);
   --about-card-hover-bg: var(--m3-surface-container-highest);

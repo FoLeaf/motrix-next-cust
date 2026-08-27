@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** @fileoverview Root application component with Naive UI theme provider and locale configuration. */
-import { computed } from 'vue'
+import { computed, provide } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   NConfigProvider,
@@ -51,11 +51,12 @@ import {
 import { useTheme } from './composables/useTheme'
 import { useVisibilityPause } from './composables/useVisibilityPause'
 
-import { useColorScheme } from './composables/useColorScheme'
+import { APP_COLOR_TOKENS_KEY, useColorScheme } from './composables/useColorScheme'
 
 const { locale: currentLocale } = useI18n()
 const { isDark } = useTheme()
-const { themeOverrides } = useColorScheme()
+const { colorTokens, themeOverrides } = useColorScheme()
+provide(APP_COLOR_TOKENS_KEY, colorTokens)
 useVisibilityPause()
 
 const theme = computed(() => (isDark.value ? darkTheme : null))

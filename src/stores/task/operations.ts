@@ -44,6 +44,33 @@ export function createTaskOperations(deps: TaskOperationsDeps) {
     return new Promise((resolve) => setTimeout(resolve, ms))
   }
 
+  async function requiresMagnetFileSelection(task: Aria2Task): Promise<boolean> {
+    if (task.status !== TASK_STATUS.PAUSED) return false
+    if (!task.following || !task.bittorrent) return false
+    if (!task.files.some((file) => Number(file.length) > 0)) return false
+
+    try {
+      const options = await api.getOption({ gid: task.gid })
+      return !options.selectFile?.trim()
+    } catch (e) {
+      logger.warn('TaskOps.resumeTask', `getOption gid=${task.gid} failed; keeping file selection pause: ${e}`)
+      return true
+    }
+  }
+
+  async function resumeTasks(tasks: Aria2Task[]): Promise<{ resumed: number; blocked: number }> {
+    const checks = await Promise.all(
+      tasks.map(async (task) => ({ task, blocked: await requiresMagnetFileSelection(task) })),
+    )
+    const resumableGids = checks.filter(({ blocked }) => !blocked).map(({ task }) => task.gid)
+    const blocked = checks.length - resumableGids.length
+
+    if (resumableGids.length > 0) {
+      await api.batchResumeTask({ gids: resumableGids })
+    }
+    return { resumed: resumableGids.length, blocked }
+  }
+
   async function removeTaskRecordWithRetry(gid: string, scope: string): Promise<boolean> {
     for (let attempt = 1; attempt <= REMOVE_RESULT_RETRY_ATTEMPTS; attempt += 1) {
       try {
@@ -123,7 +150,7 @@ export function createTaskOperations(deps: TaskOperationsDeps) {
     }
 
     try {
-      await deleteTaskFiles(task)
+      await deleteTaskFiles(task, 'trash')
     } catch (e) {
       logger.debug('TaskOps.cancelMagnetSelection', `deleteTaskFiles gid=${task.gid} skipped: ${e}`)
     }
@@ -196,10 +223,33 @@ export function createTaskOperations(deps: TaskOperationsDeps) {
     }
   }
 
-  async function resumeTask(task: Aria2Task) {
+  async function resumeTask(task: Aria2Task): Promise<boolean> {
+    if (await requiresMagnetFileSelection(task)) {
+      logger.info('TaskOps.resumeTask', `gid=${task.gid} blocked=file-selection-required`)
+      return false
+    }
+
     try {
       await api.resumeTask({ gid: task.gid })
       logger.info('TaskOps.resumeTask', `gid=${task.gid}`)
+      return true
+    } finally {
+      await fetchList()
+      await api.saveSession()
+    }
+  }
+
+  async function applyMagnetFileSelection(task: Aria2Task, selectFile: string): Promise<void> {
+    if (task.status !== TASK_STATUS.PAUSED && task.status !== TASK_STATUS.WAITING) {
+      throw new Error(`Cannot apply magnet file selection while task is ${task.status}`)
+    }
+
+    try {
+      await api.changeOption({ gid: task.gid, options: { 'select-file': selectFile } })
+      if (task.status === TASK_STATUS.PAUSED) {
+        await api.resumeTask({ gid: task.gid })
+      }
+      logger.info('TaskOps.applyMagnetFileSelection', `gid=${task.gid} status=${task.status}`)
     } finally {
       await fetchList()
       await api.saveSession()
@@ -224,10 +274,12 @@ export function createTaskOperations(deps: TaskOperationsDeps) {
     }
   }
 
-  async function resumeAllTask() {
+  async function resumeAllTask(): Promise<{ resumed: number; blocked: number }> {
     try {
-      await api.resumeAllTask()
-      logger.info('TaskOps.resumeAllTask', 'resumed all paused tasks')
+      const pausedTasks = taskList.value.filter((task) => task.status === TASK_STATUS.PAUSED)
+      const result = await resumeTasks(pausedTasks)
+      logger.info('TaskOps.resumeAllTask', `resumed=${result.resumed} blocked=${result.blocked}`)
+      return result
     } finally {
       await fetchList()
       await api.saveSession()
@@ -376,6 +428,8 @@ export function createTaskOperations(deps: TaskOperationsDeps) {
     cancelMagnetSelectionDownload,
     pauseTask,
     resumeTask,
+    applyMagnetFileSelection,
+    resumeTasks,
     pauseAllTask,
     resumeAllTask,
     toggleTask,

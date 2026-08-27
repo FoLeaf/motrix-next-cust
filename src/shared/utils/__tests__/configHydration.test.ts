@@ -119,9 +119,10 @@ describe('hydrateAppConfig', () => {
       taskCardMode: 'tiny' as AppConfig['taskCardMode'],
       colorScheme: 'missing-scheme',
       updateChannel: 'nightly' as AppConfig['updateChannel'],
-      logLevel: 'verbose',
-      aria2LogLevel: 'verbose',
+      logLevel: 'verbose' as AppConfig['logLevel'],
+      aria2LogLevel: 'verbose' as AppConfig['aria2LogLevel'],
       fileAllocation: 'magic',
+      fileDeletionMode: 'erase' as AppConfig['fileDeletionMode'],
     })
 
     expect(result.config.theme).toBe(DEFAULT_APP_CONFIG.theme)
@@ -131,6 +132,7 @@ describe('hydrateAppConfig', () => {
     expect(result.config.logLevel).toBe(DEFAULT_APP_CONFIG.logLevel)
     expect(result.config.aria2LogLevel).toBe(DEFAULT_APP_CONFIG.aria2LogLevel)
     expect(result.config.fileAllocation).toBe(DEFAULT_APP_CONFIG.fileAllocation)
+    expect(result.config.fileDeletionMode).toBe(DEFAULT_APP_CONFIG.fileDeletionMode)
     expect(result.repairs).toEqual(
       expect.arrayContaining([
         'theme',
@@ -140,21 +142,21 @@ describe('hydrateAppConfig', () => {
         'logLevel',
         'aria2LogLevel',
         'fileAllocation',
+        'fileDeletionMode',
       ]),
     )
   })
 
-  it('accepts aria2 notice logs without allowing notice for Motrix logs', () => {
+  it('repairs invalid external BitTorrent endpoint values', () => {
     const result = hydrateAppConfig({
       configVersion: CONFIG_VERSION,
-      logLevel: 'notice',
-      aria2LogLevel: 'notice',
+      btExternalIp: 'tracker.example.com',
+      btExternalPort: 70000,
     })
 
-    expect(result.config.logLevel).toBe(DEFAULT_APP_CONFIG.logLevel)
-    expect(result.config.aria2LogLevel).toBe('notice')
-    expect(result.repairs).toContain('logLevel')
-    expect(result.repairs).not.toContain('aria2LogLevel')
+    expect(result.config.btExternalIp).toBe(DEFAULT_APP_CONFIG.btExternalIp)
+    expect(result.config.btExternalPort).toBe(DEFAULT_APP_CONFIG.btExternalPort)
+    expect(result.repairs).toEqual(expect.arrayContaining(['btExternalIp', 'btExternalPort']))
   })
 
   it('repairs invalid nested values and keeps valid nested values', () => {
@@ -263,7 +265,8 @@ describe('hydrateAppConfig', () => {
     expect(UPDATE_CHANNELS).toContain(DEFAULT_APP_CONFIG.updateChannel)
     expect(APP_LOG_LEVELS).toContain(DEFAULT_APP_CONFIG.logLevel)
     expect(ARIA2_LOG_LEVELS).toContain(DEFAULT_APP_CONFIG.aria2LogLevel)
-    expect(DEFAULT_APP_CONFIG.aria2LogLevel).toBe('notice')
+    expect(DEFAULT_APP_CONFIG.logLevel).toBe('warn')
+    expect(DEFAULT_APP_CONFIG.aria2LogLevel).toBe('warn')
     expect(FILE_ALLOCATION_OPTIONS).toContain(DEFAULT_APP_CONFIG.fileAllocation)
     expect(DEFAULT_APP_CONFIG.proxy.scope).toEqual(PROXY_SCOPE_OPTIONS)
   })

@@ -498,11 +498,11 @@ watch(
 }
 
 .ua-manager-list-item:hover {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
 }
 
 .ua-manager-list-item--active {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
   background: var(--m3-surface-container-high);
 }
 

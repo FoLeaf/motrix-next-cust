@@ -46,6 +46,6 @@ defineEmits<{
   transition: border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 .torrent-upload:hover {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
 }
 </style>

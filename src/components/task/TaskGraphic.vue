@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /** @fileoverview Visual bitfield progress graphic for download pieces. */
 import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { useAppColorTokens } from '@/composables/useColorScheme'
 
 const props = withDefaults(
   defineProps<{
@@ -22,6 +23,7 @@ const props = withDefaults(
 const container = ref<HTMLElement>()
 const canvas = ref<HTMLCanvasElement>()
 const containerWidth = ref(300)
+const colorTokens = useAppColorTokens()
 
 function updateWidth() {
   if (container.value) containerWidth.value = container.value.clientWidth
@@ -56,15 +58,10 @@ const rowCount = computed(() => Math.ceil(len.value / columnCount.value))
 const canvasWidth = computed(() => atomWG.value * (columnCount.value - 1) + props.atomWidth)
 const canvasHeight = computed(() => atomHG.value * (rowCount.value - 1) + props.atomHeight)
 
-/** Reads a CSS variable from :root. */
-function cssVar(name: string, fallback: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
-}
-
 /** Status gradient: inactive → fully active (5 levels), derived from M3 tokens. */
 function getStatusColors(): string[] {
-  const surface = cssVar('--m3-surface-container', '#2a2a2a')
-  const success = cssVar('--m3-status-success', '#67C23A')
+  const surface = colorTokens.value.surfaceContainer
+  const success = colorTokens.value.statusSuccess
   return [
     surface,
     mixHex(surface, success, 0.25),
@@ -83,7 +80,7 @@ function mixHex(a: string, b: string, t: number): string {
   const bl = Math.round(pa[2] + (pb[2] - pa[2]) * t)
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`
 }
-const strokeColor = computed(() => cssVar('--m3-outline-variant', '#333'))
+const strokeColor = computed(() => colorTokens.value.outlineVariant)
 
 // Track previous status for fade-in animation
 const prevStatus = ref<number[]>([])
@@ -155,7 +152,7 @@ function draw() {
     // Glow for newly activated pieces
     if (justActivated) {
       ctx.globalAlpha = 0.3
-      ctx.fillStyle = cssVar('--m3-status-success', '#67C23A')
+      ctx.fillStyle = colorTokens.value.statusSuccess
       ctx.fill()
     }
   }
@@ -169,6 +166,7 @@ watch(
   () => nextTick(draw),
 )
 watch([canvasWidth, canvasHeight], () => nextTick(draw))
+watch(colorTokens, () => nextTick(draw))
 onMounted(() => nextTick(draw))
 </script>
 

@@ -404,19 +404,19 @@ async function handleScheduleToggle(enabled: boolean) {
 
 /* ── LIMITED — tertiary color accent ─────────────────────────────── */
 .speedometer.limited {
-  border-color: var(--m3-tertiary-container, var(--m3-outline-variant));
+  border-color: color-mix(in srgb, var(--m3-tertiary) 32%, transparent);
 }
 .speedometer.limited:hover {
-  border-color: var(--m3-tertiary, var(--m3-outline));
+  border-color: var(--m3-tertiary);
 }
 .speedometer.limited .mode i {
-  color: var(--m3-tertiary, var(--color-primary));
+  color: var(--m3-tertiary);
 }
 .speedometer.limited .speed-row.download {
-  color: var(--m3-tertiary, var(--color-primary));
+  color: var(--m3-tertiary);
 }
 .speedometer.limited .speed-row.download .speed-arrow {
-  color: var(--m3-tertiary, var(--color-primary));
+  color: var(--m3-tertiary);
 }
 
 /* ── Common ──────────────────────────────────────────────────────── */
@@ -437,7 +437,7 @@ async function handleScheduleToggle(enabled: boolean) {
   height: 30px;
   padding: 2px;
   position: relative;
-  color: var(--color-primary);
+  color: var(--m3-primary);
   transition:
     transform 0.35s ease,
     color 0.2s ease;
@@ -484,7 +484,7 @@ async function handleScheduleToggle(enabled: boolean) {
   color: var(--m3-outline);
 }
 .speed-row.download {
-  color: var(--color-primary);
+  color: var(--m3-primary);
 }
 .speed-row.download .speed-text span {
   font-size: 13px;
@@ -492,7 +492,7 @@ async function handleScheduleToggle(enabled: boolean) {
   font-weight: 500;
 }
 .speed-row.download .speed-arrow {
-  color: var(--color-primary);
+  color: var(--m3-primary);
 }
 .speed-row.download .limit-value {
   font-size: 13px;
@@ -511,7 +511,7 @@ async function handleScheduleToggle(enabled: boolean) {
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--m3-tertiary) 22%, var(--m3-surface-container));
-  color: var(--m3-tertiary, var(--color-primary));
+  color: var(--m3-tertiary);
   font-size: 10px;
   border: 1px solid color-mix(in srgb, var(--m3-tertiary) 30%, transparent);
 }
@@ -528,7 +528,7 @@ async function handleScheduleToggle(enabled: boolean) {
   align-items: center;
   justify-content: center;
   background: color-mix(in srgb, var(--m3-primary) 22%, var(--m3-surface-container));
-  color: var(--m3-primary, var(--color-primary));
+  color: var(--m3-primary);
   font-size: 10px;
   border: 1px solid color-mix(in srgb, var(--m3-primary) 30%, transparent);
 }
@@ -594,7 +594,7 @@ async function handleScheduleToggle(enabled: boolean) {
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 10px;
-  color: var(--m3-on-surface, inherit);
+  color: var(--m3-on-surface);
 }
 .limit-panel-row {
   display: flex;

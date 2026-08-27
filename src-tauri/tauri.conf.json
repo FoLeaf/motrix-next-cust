@@ -40,6 +40,7 @@
       "binaries/aria2.conf",
       "data/ed2k-bootstrap/server.met",
       "data/ed2k-bootstrap/nodes.dat",
+      "data/bt-peer-blocklist.txt",
       "data/dbip-country-lite.mmdb"
     ],
     "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
@@ -53,7 +54,22 @@
       }
     ],
     "macOS": {
-      "signingIdentity": "-"
+      "signingIdentity": "-",
+      "dmg": {
+        "background": "dmg/background.png",
+        "windowSize": {
+          "width": 660,
+          "height": 400
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
     },
     "windows": {
       "nsis": {
@@ -96,7 +112,10 @@
     },
     "linux": {
       "deb": {
-        "desktopTemplate": "deb/motrix-next.desktop.hbs"
+        "desktopTemplate": "linux/motrix-next.desktop.hbs"
+      },
+      "rpm": {
+        "desktopTemplate": "linux/motrix-next.desktop.hbs"
       }
     }
   },

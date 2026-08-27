@@ -13,7 +13,6 @@ import {
   getActionTarget,
   resolvePhaseAfterDownload,
   shouldAllowUpdateDialogClose,
-  isUpdateRollback,
   calcProgressPercent,
   bytesToMB,
   getUpdateProxy,
@@ -126,27 +125,6 @@ describe('shouldAllowUpdateDialogClose', () => {
     expect(shouldAllowUpdateDialogClose('ready')).toBe(true)
     expect(shouldAllowUpdateDialogClose('error')).toBe(true)
     expect(shouldAllowUpdateDialogClose('up-to-date')).toBe(true)
-  })
-})
-
-// ── isUpdateRollback ────────────────────────────────────────────────
-
-describe('isUpdateRollback', () => {
-  it('returns false when versions are empty', () => {
-    expect(isUpdateRollback('', '2.0.0')).toBe(false)
-    expect(isUpdateRollback('2.0.0', '')).toBe(false)
-  })
-
-  it('returns false for upgrade', () => {
-    expect(isUpdateRollback('1.0.0', '2.0.0')).toBe(false)
-  })
-
-  it('returns true for downgrade', () => {
-    expect(isUpdateRollback('2.0.0', '1.0.0')).toBe(true)
-  })
-
-  it('returns false for same version', () => {
-    expect(isUpdateRollback('2.0.0', '2.0.0')).toBe(false)
   })
 })
 

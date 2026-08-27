@@ -69,6 +69,19 @@ function handleFileTimestampChange(val: string) {
   form.value.remoteTime = val === FILE_TS_SERVER
 }
 
+const fileDeletionModeOptions = computed(() => [
+  { label: t('preferences.file-deletion-mode-trash'), value: 'trash' },
+  { label: t('preferences.file-deletion-mode-permanent'), value: 'permanent' },
+])
+
+const skipConfirmationFileLabel = computed(() =>
+  t(
+    form.value.fileDeletionMode === 'permanent'
+      ? 'preferences.delete-files-when-skip-confirm-permanent'
+      : 'preferences.delete-files-when-skip-confirm-trash',
+  ),
+)
+
 // ── Safe-limit warning ──────────────────────────────────────────────
 const safeLimits = [
   {
@@ -301,7 +314,7 @@ const { restartEngine } = useEngineRestart()
 function handleManualRestart() {
   const port = (preferenceStore.config.rpcListenPort as number) || ENGINE_RPC_PORT
   const secret = (preferenceStore.config.rpcSecret as string) || ''
-  const d = dialog.warning({
+  const d = dialog.info({
     title: t('preferences.engine-restart-title'),
     content: t('preferences.engine-restart-manual-confirm'),
     positiveText: t('preferences.engine-restart-now'),
@@ -497,13 +510,16 @@ onMounted(async () => {
         <NFormItem :label="t('preferences.new-task-show-downloading')">
           <NSwitch v-model:value="form.newTaskShowDownloading" />
         </NFormItem>
+        <NFormItem :label="t('preferences.file-deletion-mode')">
+          <NSelect v-model:value="form.fileDeletionMode" :options="fileDeletionModeOptions" class="pref-control-auto" />
+        </NFormItem>
         <NFormItem :label="t('preferences.no-confirm-before-delete-task')">
           <NSwitch v-model:value="form.noConfirmBeforeDeleteTask" />
         </NFormItem>
         <NCollapseTransition :show="form.noConfirmBeforeDeleteTask">
           <NFormItem label=" ">
             <NCheckbox v-model:checked="form.deleteFilesWhenSkipConfirm">
-              {{ t('preferences.delete-files-when-skip-confirm') }}
+              {{ skipConfirmationFileLabel }}
             </NCheckbox>
           </NFormItem>
         </NCollapseTransition>

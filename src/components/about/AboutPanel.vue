@@ -301,7 +301,7 @@ function openUrl(url: string) {
   color: var(--m3-on-surface);
 }
 .about-title .accent {
-  color: var(--color-primary);
+  color: var(--m3-primary);
 }
 
 /* ── Version Badges (stacked, prominent) ──────────────────────────── */
@@ -325,12 +325,12 @@ function openUrl(url: string) {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
 }
 .version-badge:hover {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
   background: var(--about-card-hover-bg);
 }
 .version-badge:hover .copy-icon {
   opacity: 1;
-  color: var(--color-primary);
+  color: var(--m3-primary);
 }
 .version-badge:active {
   transform: scale(0.98);
@@ -425,8 +425,8 @@ function openUrl(url: string) {
   transition: var(--transition-all);
 }
 .about-link-card:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--m3-primary);
+  color: var(--m3-primary);
   background: var(--about-card-hover-bg);
 }
 
@@ -440,7 +440,7 @@ function openUrl(url: string) {
   color: var(--m3-outline);
 }
 .about-link {
-  color: var(--color-primary);
+  color: var(--m3-primary);
   cursor: pointer;
   text-decoration: none;
 }

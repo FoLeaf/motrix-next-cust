@@ -7,14 +7,14 @@
 use serde::{Deserialize, Serialize};
 
 /// URI entry within an aria2 file descriptor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Aria2FileUri {
     pub uri: String,
     pub status: String,
 }
 
 /// Single file within an aria2 download task.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Aria2File {
     pub index: String,
@@ -27,7 +27,7 @@ pub struct Aria2File {
 }
 
 /// BitTorrent metadata attached to a task when the download is a torrent.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Aria2BtInfo {
     #[serde(default)]
     pub info: Option<Aria2BtName>,
@@ -44,7 +44,7 @@ pub struct Aria2BtInfo {
 }
 
 /// Name sub-object within `Aria2BtInfo.info`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Aria2BtName {
     pub name: String,
 }
@@ -66,7 +66,7 @@ where
 }
 
 /// ED2K metadata attached to a task when the download is an ED2K file link or search request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Aria2Ed2kInfo {
     #[serde(default)]
@@ -125,7 +125,7 @@ pub struct Aria2Ed2kInfo {
 /// tellWaiting, or tellStopped.
 ///
 /// All numeric values are strings per the aria2 JSON-RPC protocol.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Aria2Task {
     pub gid: String,
@@ -181,6 +181,14 @@ pub struct Aria2GlobalStat {
     pub num_waiting: String,
     pub num_stopped: String,
     pub num_stopped_total: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Aria2BtEndpoint {
+    pub listen_port: String,
+    pub announce_port: String,
+    pub external_ip: String,
 }
 
 // ── Internal JSON-RPC protocol types ────────────────────────────────

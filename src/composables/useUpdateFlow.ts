@@ -4,9 +4,8 @@
  * Contains the update phase state machine logic: action button labels/types,
  * progress calculations, version direction detection, and proxy resolution.
  */
-import { isDowngrade } from '@shared/utils/semver'
 import { PROXY_SCOPES } from '@shared/constants'
-import { resolveAppProxyUrl } from '@shared/utils/appProxyPolicy'
+import { resolveAppProxyUrl } from '@shared/utils/proxy'
 import type { ProxyConfig } from '@shared/types'
 
 // ── Types ───────────────────────────────────────────────────────────
@@ -59,14 +58,6 @@ export function resolvePhaseAfterDownload(status: DownloadUpdateStatus): Extract
 /** Returns whether the dialog may be closed by generic close affordances. */
 export function shouldAllowUpdateDialogClose(phase: UpdatePhase): boolean {
   return phase !== 'downloading' && phase !== 'installing'
-}
-
-// ── Version Detection ───────────────────────────────────────────────
-
-/** Determines whether an update is a downgrade/rollback. */
-export function isUpdateRollback(currentVersion: string, targetVersion: string): boolean {
-  if (!currentVersion || !targetVersion) return false
-  return isDowngrade(currentVersion, targetVersion)
 }
 
 // ── Progress Calculations ───────────────────────────────────────────

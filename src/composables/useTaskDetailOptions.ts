@@ -26,7 +26,7 @@ import { sanitizeHeaderValue, sanitizeHttpHeaderOptions } from '@shared/utils/he
 import { TASK_STATUS } from '@shared/constants'
 import type { Aria2Task, Aria2EngineOptions, ProxyConfig } from '@shared/types'
 import { logger } from '@shared/logger'
-import { buildTaskProxyOptions, hasInvalidManualProxy, type TaskProxyMode } from '@shared/utils/proxyPolicy'
+import { buildTaskProxyOptions, hasInvalidManualProxy, type TaskProxyMode } from '@shared/utils/proxy'
 
 // ── Constants ─────────────────────────────────────────────────────
 

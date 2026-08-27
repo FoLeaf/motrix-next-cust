@@ -26,6 +26,12 @@ pub struct Aria2Client {
 /// Tauri managed state wrapper.
 pub struct Aria2State(pub Arc<Aria2Client>);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ResumeEligibleResult {
+    pub resumed: usize,
+    pub blocked: usize,
+}
+
 impl Aria2Client {
     /// Creates a new client with default credentials.
     ///
@@ -153,9 +159,57 @@ impl Aria2Client {
         self.call("forcePauseAll", vec![]).await
     }
 
-    /// Resumes all paused tasks.
-    pub async fn unpause_all(&self) -> Result<String, AppError> {
-        self.call("unpauseAll", vec![]).await
+    /// Resumes paused tasks that do not require unresolved magnet file selection.
+    pub async fn resume_eligible(&self) -> Result<ResumeEligibleResult, AppError> {
+        const PAGE_SIZE: i64 = 1000;
+        let mut waiting_tasks = Vec::new();
+        let mut offset = 0;
+        loop {
+            let page = self.tell_waiting(offset, PAGE_SIZE).await?;
+            let page_len = page.len();
+            waiting_tasks.extend(page);
+            if page_len < PAGE_SIZE as usize {
+                break;
+            }
+            offset += PAGE_SIZE;
+        }
+        let paused_tasks = waiting_tasks
+            .into_iter()
+            .filter(|task| task.status == "paused")
+            .collect::<Vec<_>>();
+        let mut result = ResumeEligibleResult {
+            resumed: 0,
+            blocked: 0,
+        };
+
+        for task in paused_tasks {
+            let is_resolved_magnet = task.following.is_some()
+                && task.bittorrent.is_some()
+                && task.files.iter().any(|file| file.length != "0");
+            if is_resolved_magnet {
+                let has_selection = self
+                    .get_option(&task.gid)
+                    .await
+                    .ok()
+                    .and_then(|options| {
+                        options
+                            .get("select-file")
+                            .and_then(serde_json::Value::as_str)
+                            .map(str::trim)
+                            .map(str::to_owned)
+                    })
+                    .is_some_and(|selection| !selection.is_empty());
+                if !has_selection {
+                    result.blocked += 1;
+                    continue;
+                }
+            }
+
+            self.unpause(&task.gid).await?;
+            result.resumed += 1;
+        }
+
+        Ok(result)
     }
 
     /// Changes global aria2 options at runtime.
@@ -165,6 +219,10 @@ impl Aria2Client {
     ) -> Result<String, AppError> {
         self.call("changeGlobalOption", vec![serde_json::Value::Object(opts)])
             .await
+    }
+
+    pub async fn get_bt_endpoint(&self) -> Result<Aria2BtEndpoint, AppError> {
+        self.call("getBtEndpoint", vec![]).await
     }
 
     /// Adds a URI-based download.
@@ -342,11 +400,6 @@ impl Aria2Client {
 
         body.result
             .ok_or_else(|| AppError::Aria2("aria2 multicall returned null result".into()))
-    }
-
-    /// Graceful pause-all.
-    pub async fn pause_all(&self) -> Result<String, AppError> {
-        self.call("pauseAll", vec![]).await
     }
 }
 

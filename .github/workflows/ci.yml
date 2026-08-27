@@ -31,6 +31,9 @@ jobs:
       - name: Type check
         run: npx vue-tsc --noEmit
 
+      - name: Repo integrity (locale parity + i18n usage)
+        run: node scripts/check-repo-integrity.mjs
+
       - name: Run tests
         run: pnpm test
 

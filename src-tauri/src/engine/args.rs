@@ -1,110 +1,53 @@
 /// Builds the CLI argument list for spawning the bundled Motrix Next engine sidecar.
 ///
-/// Whitelists only valid Aria2 Next options from the config object and handles
-/// the `keep-sharing` app-level flag. Options managed exclusively by
+/// The whitelist of valid Aria2 Next options is loaded from the shared
+/// `aria2Options.json` — the single source of truth also consumed by the
+/// frontend (`src/shared/configKeys.ts`). Options managed exclusively by
 /// `aria2.conf` are excluded from the whitelist to prevent store overrides.
-pub(crate) const SUPPORTED_ENGINE_KEYS: &[&str] = &[
-    "all-proxy-passwd",
-    "all-proxy-user",
-    "all-proxy",
-    "allow-overwrite",
-    "allow-piece-length-change",
-    "always-resume",
-    "async-dns",
-    "auto-file-renaming",
-    "bt-enable-lpd",
-    "bt-exclude-tracker",
-    "bt-force-encryption",
-    "bt-max-peers",
-    "bt-require-crypto",
-    "bt-stop-timeout",
-    "bt-tracker",
-    "check-integrity",
-    "checksum",
-    "conditional-get",
-    "connect-timeout",
-    "content-disposition-default-utf8",
-    "continue",
-    "detach-share-only",
-    "dht-listen-port",
-    "dir",
-    "dry-run",
-    "ed2k-listen-port",
-    "ed2k-server",
-    "ed2k-udp-listen-port",
-    "ed2k-upload-slots",
-    "enable-dht",
-    "enable-dht6",
-    "enable-http-keep-alive",
-    "enable-http-pipelining",
-    "enable-mmap",
-    "enable-peer-exchange",
-    "file-allocation",
-    "force-sequential",
-    "ftp-passwd",
-    "ftp-pasv",
-    "ftp-proxy-passwd",
-    "ftp-proxy-user",
-    "ftp-proxy",
-    "ftp-type",
-    "ftp-user",
-    "gid",
-    "hash-check-only",
-    "header",
-    "http-accept-gzip",
-    "http-no-cache",
-    "http-passwd",
-    "http-proxy-passwd",
-    "http-proxy-user",
-    "http-proxy",
-    "http-user",
-    "https-proxy-passwd",
-    "https-proxy-user",
-    "https-proxy",
-    "index-out",
-    "listen-port",
-    "lowest-speed-limit",
-    "max-concurrent-downloads",
-    "max-connection-per-server",
-    "max-download-limit",
-    "max-file-not-found",
-    "max-mmap-limit",
-    "max-overall-download-limit",
-    "max-overall-upload-limit",
-    "max-resume-failure-tries",
-    "max-tries",
-    "max-upload-limit",
-    "min-split-size",
-    "no-file-allocation-limit",
-    "no-netrc",
-    "no-proxy",
-    "no-want-digest-header",
-    "out",
-    "parameterized-uri",
-    "pause-metadata",
-    "pause",
-    "piece-length",
-    "proxy-method",
-    "realtime-chunk-checksum",
-    "referer",
-    "remote-time",
-    "remove-control-file",
-    "retry-wait",
-    "reuse-uri",
-    "allow-remote-access",
-    "rpc-listen-port",
-    "rpc-save-upload-metadata",
-    "rpc-secret",
-    "seed-ratio",
-    "seed-time",
-    "select-file",
-    "split",
-    "stream-piece-selector",
-    "timeout",
-    "uri-selector",
-    "use-head",
-    "user-agent",
-];
+use std::collections::HashSet;
+use std::sync::OnceLock;
+
+/// Shared engine-option metadata, embedded at compile time.
+const ARIA2_OPTIONS_JSON: &str = include_str!("../../../src/shared/aria2Options.json");
+
+#[derive(serde::Deserialize)]
+struct Aria2Options {
+    #[serde(rename = "engineOptions")]
+    engine_options: Vec<String>,
+    #[serde(rename = "nonHotReloadable")]
+    non_hot_reloadable: Vec<String>,
+}
+
+fn aria2_options() -> &'static Aria2Options {
+    static OPTIONS: OnceLock<Aria2Options> = OnceLock::new();
+    OPTIONS.get_or_init(|| {
+        serde_json::from_str(ARIA2_OPTIONS_JSON).expect("aria2Options.json is valid JSON")
+    })
+}
+
+/// Every aria2 engine option the app may pass on the CLI or via RPC.
+pub(crate) fn supported_engine_keys() -> &'static HashSet<&'static str> {
+    static KEYS: OnceLock<HashSet<&'static str>> = OnceLock::new();
+    KEYS.get_or_init(|| {
+        aria2_options()
+            .engine_options
+            .iter()
+            .map(String::as_str)
+            .collect()
+    })
+}
+
+/// Options aria2 rejects via `changeGlobalOption` (bound at process start).
+pub(crate) fn non_hot_reloadable_keys() -> &'static HashSet<&'static str> {
+    static KEYS: OnceLock<HashSet<&'static str>> = OnceLock::new();
+    KEYS.get_or_init(|| {
+        aria2_options()
+            .non_hot_reloadable
+            .iter()
+            .map(String::as_str)
+            .collect()
+    })
+}
 
 const PROXY_CLEAR_KEYS: &[&str] = &[
     "all-proxy",
@@ -126,6 +69,12 @@ fn preserves_empty_value(key: &str) -> bool {
     PROXY_CLEAR_KEYS.contains(&key) || key == "seed-time"
 }
 
+#[derive(Clone, Copy, Default)]
+pub(crate) struct ManagedEnginePaths<'a> {
+    pub ed2k_bootstrap: Option<(&'a str, &'a str)>,
+    pub bt_peer_blocklist: Option<&'a str>,
+}
+
 #[cfg(test)]
 pub(crate) fn build_start_args(
     config: &serde_json::Value,
@@ -142,18 +91,18 @@ pub(crate) fn build_start_args(
         session_exists,
         log_file_path,
         log_level,
-        None,
+        ManagedEnginePaths::default(),
     )
 }
 
-pub(crate) fn build_start_args_with_ed2k_bootstrap(
+pub(crate) fn build_start_args_with_managed_paths(
     config: &serde_json::Value,
     conf_path: Option<&str>,
     session_path: &str,
     session_exists: bool,
     log_file_path: &str,
     log_level: &str,
-    ed2k_bootstrap_paths: Option<(&str, &str)>,
+    managed_paths: ManagedEnginePaths<'_>,
 ) -> Vec<String> {
     build_start_args_impl(
         config,
@@ -162,7 +111,7 @@ pub(crate) fn build_start_args_with_ed2k_bootstrap(
         session_exists,
         log_file_path,
         log_level,
-        ed2k_bootstrap_paths,
+        managed_paths,
     )
 }
 
@@ -173,7 +122,7 @@ fn build_start_args_impl(
     session_exists: bool,
     log_file_path: &str,
     log_level: &str,
-    ed2k_bootstrap_paths: Option<(&str, &str)>,
+    managed_paths: ManagedEnginePaths<'_>,
 ) -> Vec<String> {
     let mut args: Vec<String> = Vec::new();
 
@@ -190,6 +139,14 @@ fn build_start_args_impl(
 
     args.push(format!("--log={log_file_path}"));
     args.push(format!("--log-level={log_level}"));
+    args.push(format!(
+        "--log-max-size={}",
+        crate::log_policy::MAX_LOG_FILE_SIZE
+    ));
+    args.push(format!(
+        "--log-max-files={}",
+        crate::log_policy::MAX_LOG_FILES
+    ));
     args.push("--quiet=true".to_string());
 
     // Check keep-sharing flag (app-level logic, not an engine option).
@@ -215,11 +172,14 @@ fn build_start_args_impl(
     if let Some(obj) = config.as_object() {
         for (key, value) in obj {
             // Only pass whitelisted Aria2 Next keys.
-            if !SUPPORTED_ENGINE_KEYS.contains(&key.as_str()) {
+            if !supported_engine_keys().contains(key.as_str()) {
                 continue;
             }
 
-            if matches!(key.as_str(), "log" | "log-file" | "log-level") {
+            if matches!(
+                key.as_str(),
+                "log" | "log-file" | "log-level" | "log-max-size" | "log-max-files"
+            ) {
                 continue;
             }
 
@@ -270,9 +230,12 @@ fn build_start_args_impl(
     args.push(format!("--rpc-listen-all={allow_remote_access}"));
     args.push("--rpc-allow-origin-all=true".to_string());
 
-    if let Some((server_met_path, nodes_dat_path)) = ed2k_bootstrap_paths {
+    if let Some((server_met_path, nodes_dat_path)) = managed_paths.ed2k_bootstrap {
         args.push(format!("--ed2k-server-list={server_met_path}"));
         args.push(format!("--ed2k-node-list={nodes_dat_path}"));
+    }
+    if let Some(path) = managed_paths.bt_peer_blocklist {
+        args.push(format!("--bt-peer-blocklist={path}"));
     }
 
     // If no conf file, ensure RPC is enabled
@@ -307,8 +270,8 @@ mod tests {
     }
 
     #[test]
-    fn build_args_injects_managed_ed2k_bootstrap_paths() {
-        let args = build_start_args_with_ed2k_bootstrap(
+    fn build_args_injects_managed_resource_paths() {
+        let args = build_start_args_with_managed_paths(
             &json!({
                 "ed2k-server-list": "/user/server.met",
                 "ed2k-node-list": "/user/nodes.dat"
@@ -318,7 +281,10 @@ mod tests {
             false,
             "/tmp/aria2-next.log",
             "debug",
-            Some(("/cache/server.met", "/cache/nodes.dat")),
+            ManagedEnginePaths {
+                ed2k_bootstrap: Some(("/cache/server.met", "/cache/nodes.dat")),
+                bt_peer_blocklist: Some("/cache/peer-blocklist.txt"),
+            },
         );
 
         assert!(!args
@@ -331,6 +297,9 @@ mod tests {
         assert!(args
             .iter()
             .any(|a| a == "--ed2k-node-list=/cache/nodes.dat"));
+        assert!(args
+            .iter()
+            .any(|a| a == "--bt-peer-blocklist=/cache/peer-blocklist.txt"));
     }
 
     #[test]
@@ -346,10 +315,10 @@ mod tests {
 
         assert!(args.iter().any(|a| a == "--log=/tmp/aria2-next.log"));
         assert!(args.iter().any(|a| a == "--log-level=info"));
+        assert!(args.iter().any(|a| a == "--log-max-size=52428800"));
+        assert!(args.iter().any(|a| a == "--log-max-files=1"));
         assert!(args.iter().any(|a| a == "--quiet=true"));
         assert!(!args.iter().any(|a| a.starts_with("--log-file=")));
-        assert!(!args.iter().any(|a| a.starts_with("--log-max-size=")));
-        assert!(!args.iter().any(|a| a.starts_with("--log-max-files=")));
         assert!(!args.iter().any(|a| a.starts_with("--console-level=")));
     }
 
@@ -359,8 +328,8 @@ mod tests {
             &json!({
                 "log-file": "/tmp/user.log",
                 "log-level": "error",
-                "log-max-size": "1M",
-                "log-max-files": "1"
+                "log-max-size": "2M",
+                "log-max-files": "4"
             }),
             None,
             "/tmp/s.session",
@@ -375,28 +344,10 @@ mod tests {
         assert!(!args.iter().any(|a| a == "--log-file=/tmp/user.log"));
         assert!(!args.iter().any(|a| a == "--log=/tmp/user.log"));
         assert!(!args.iter().any(|a| a == "--log-level=error"));
-        assert!(!args.iter().any(|a| a == "--log-max-size=1M"));
-        assert!(!args.iter().any(|a| a == "--log-max-files=1"));
-        assert!(!args.iter().any(|a| a.starts_with("--console-level=")));
-    }
-
-    #[test]
-    fn build_args_always_enables_aria2_file_log() {
-        let args = build_start_args(
-            &json!({}),
-            None,
-            "/tmp/s.session",
-            false,
-            "/tmp/aria2-next.log",
-            "notice",
-        );
-
-        assert!(args.iter().any(|a| a == "--log=/tmp/aria2-next.log"));
-        assert!(args.iter().any(|a| a == "--log-level=notice"));
-        assert!(args.iter().any(|a| a == "--quiet=true"));
-        assert!(!args.iter().any(|a| a.starts_with("--log-file=")));
-        assert!(!args.iter().any(|a| a.starts_with("--log-max-size=")));
-        assert!(!args.iter().any(|a| a.starts_with("--log-max-files=")));
+        assert!(args.iter().any(|a| a == "--log-max-size=52428800"));
+        assert!(args.iter().any(|a| a == "--log-max-files=1"));
+        assert!(!args.iter().any(|a| a == "--log-max-size=2M"));
+        assert!(!args.iter().any(|a| a == "--log-max-files=4"));
         assert!(!args.iter().any(|a| a.starts_with("--console-level=")));
     }
 

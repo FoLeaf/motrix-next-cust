@@ -734,10 +734,6 @@ mod tests {
             status: status.to_string(),
             total_length: "1024".to_string(),
             completed_length: "1024".to_string(),
-            upload_length: "0".to_string(),
-            download_speed: "0".to_string(),
-            upload_speed: "0".to_string(),
-            connections: "0".to_string(),
             dir: "/tmp".to_string(),
             files: vec![Aria2File {
                 index: "1".to_string(),
@@ -747,21 +743,7 @@ mod tests {
                 selected: "true".to_string(),
                 uris: vec![],
             }],
-            bittorrent: None,
-            ed2k: None,
-            info_hash: None,
-            seeder: None,
-            num_seeders: None,
-            num_pieces: None,
-            piece_length: None,
-            error_code: None,
-            error_message: None,
-            bitfield: None,
-            verified_length: None,
-            verify_integrity_pending: None,
-            followed_by: None,
-            following: None,
-            belongs_to: None,
+            ..Aria2Task::default()
         }
     }
 

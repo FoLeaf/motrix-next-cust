@@ -44,6 +44,7 @@ import {
   buildTaskDetailKind,
   buildTaskTransferSummary,
   buildUriDetailSummary,
+  getTaskDetailStatusLabelKey,
 } from '@/composables/useTaskDetailSummary'
 import { usePreferenceStore } from '@/stores/preference'
 import { useTaskStore } from '@/stores/task'
@@ -231,13 +232,11 @@ const taskStatusKey = computed(() =>
 )
 const taskStatus = computed(() => {
   const key = taskStatusKey.value
-  const labelKey = key === 'seeding' || key === 'sharing' ? `task.${key}` : `task.status-${key}`
+  const labelKey = getTaskDetailStatusLabelKey(key)
   const translated = t(labelKey)
   return translated !== labelKey ? translated : key
 })
 const taskFullName = computed(() => (props.task ? getTaskDisplayName(props.task, { defaultName: 'Unknown' }) : ''))
-type TaskStatusTagType = 'default' | 'success' | 'warning' | 'error' | 'info'
-
 // ── Task date display ────────────────────────────────────────────────
 const taskAddedAt = computed(() => {
   if (!props.task) return ''
@@ -283,6 +282,8 @@ function yesNo(value?: boolean | string): string {
   const normalized = typeof value === 'boolean' ? value : value === 'true'
   return normalized ? t('task.task-ed2k-yes') : t('task.task-ed2k-no')
 }
+
+type TaskStatusTagType = 'default' | 'success' | 'warning' | 'error' | 'info'
 
 const statusTagType = computed<TaskStatusTagType>(() => {
   switch (taskStatusKey.value) {
@@ -698,7 +699,7 @@ function handleClose() {
 .detail-tabs {
   display: flex;
   gap: 2px;
-  border-bottom: 1px solid var(--panel-border, #3a3a3a);
+  border-bottom: 1px solid var(--panel-border);
   padding-bottom: 0;
   margin-bottom: 0;
 }
@@ -713,7 +714,7 @@ function handleClose() {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: var(--task-action-color, #999);
+  color: var(--m3-on-surface-variant);
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
@@ -721,12 +722,12 @@ function handleClose() {
 }
 
 .detail-tab:hover {
-  color: var(--color-primary);
+  color: var(--m3-on-surface);
 }
 
 .detail-tab.active {
-  color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  color: var(--m3-on-surface);
+  border-bottom-color: var(--m3-primary);
 }
 
 .tab-content-wrapper {
@@ -766,14 +767,14 @@ function handleClose() {
 
 :deep(.detail-copy-button:hover) {
   opacity: 1;
-  color: var(--color-primary);
+  color: var(--m3-primary);
 }
 
 .section-divider {
   margin: 20px 0 12px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--m3-primary);
   letter-spacing: 0.5px;
 }
 

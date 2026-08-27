@@ -44,6 +44,7 @@ struct Inner {
 
 #[derive(Clone, Debug)]
 struct MappedPort {
+    external: u16,
     internal: u16,
     protocol: PortMappingProtocol,
     lease: MappingLease,
@@ -98,23 +99,44 @@ async fn discover_gateway() -> Result<Gateway<Tokio>, String> {
 async fn map_port(
     gw: &Gateway<Tokio>,
     local_ip: Ipv4Addr,
-    port: u16,
+    external_port: u16,
+    internal_port: u16,
     proto: PortMappingProtocol,
 ) -> Result<MappingLease, String> {
-    let local = SocketAddr::V4(SocketAddrV4::new(local_ip, port));
+    let local = SocketAddr::V4(SocketAddrV4::new(local_ip, internal_port));
     match gw
-        .add_port(proto, port, local, LEASE_DURATION_SECS, MAPPING_DESC)
+        .add_port(
+            proto,
+            external_port,
+            local,
+            LEASE_DURATION_SECS,
+            MAPPING_DESC,
+        )
         .await
-        .map_err(|e| format!("UPnP map port {port} ({proto:?}) failed: {e}"))
+        .map_err(|e| {
+            format!(
+                "UPnP map external port {external_port} to internal port {internal_port} ({proto:?}) failed: {e}"
+            )
+        })
     {
         Ok(()) => Ok(MappingLease::Temporary),
         Err(err) if requires_permanent_lease(&err) => {
-            log::info!("upnp:retry-permanent-lease port={port} proto={proto:?}");
-            gw.add_port(proto, port, local, PERMANENT_LEASE_SECS, MAPPING_DESC)
+            log::info!(
+                "upnp:retry-permanent-lease external_port={external_port} internal_port={internal_port} proto={proto:?}"
+            );
+            gw.add_port(
+                proto,
+                external_port,
+                local,
+                PERMANENT_LEASE_SECS,
+                MAPPING_DESC,
+            )
                 .await
                 .map(|()| MappingLease::Permanent)
                 .map_err(|e| {
-                    format!("UPnP map port {port} ({proto:?}) with permanent lease failed: {e}")
+                    format!(
+                        "UPnP map external port {external_port} to internal port {internal_port} ({proto:?}) with permanent lease failed: {e}"
+                    )
                 })
         }
         Err(err) => Err(err),
@@ -143,6 +165,7 @@ async fn unmap_port(
 pub async fn start_mapping(
     state: &UpnpState,
     bt_port: u16,
+    bt_external_port: u16,
     dht_port: u16,
     ed2k_port: Option<u16>,
     ed2k_udp_port: Option<u16>,
@@ -156,19 +179,31 @@ pub async fn start_mapping(
 
     // Map BT listen port (TCP), DHT listen port (UDP), and ED2K listen ports (TCP/UDP).
     // Use allSettled-style: report per-port results without short-circuiting.
-    let bt_result = map_port(&gw, local_ip, bt_port, PortMappingProtocol::TCP).await;
-    let dht_result = map_port(&gw, local_ip, dht_port, PortMappingProtocol::UDP).await;
+    let effective_bt_external_port = if bt_external_port == 0 {
+        bt_port
+    } else {
+        bt_external_port
+    };
+    let bt_result = map_port(
+        &gw,
+        local_ip,
+        effective_bt_external_port,
+        bt_port,
+        PortMappingProtocol::TCP,
+    )
+    .await;
+    let dht_result = map_port(&gw, local_ip, dht_port, dht_port, PortMappingProtocol::UDP).await;
     let ed2k_result = match ed2k_port.filter(|port| *port > 0) {
         Some(port) => Some((
             port,
-            map_port(&gw, local_ip, port, PortMappingProtocol::TCP).await,
+            map_port(&gw, local_ip, port, port, PortMappingProtocol::TCP).await,
         )),
         None => None,
     };
     let ed2k_udp_result = match ed2k_udp_port.filter(|port| *port > 0) {
         Some(port) => Some((
             port,
-            map_port(&gw, local_ip, port, PortMappingProtocol::UDP).await,
+            map_port(&gw, local_ip, port, port, PortMappingProtocol::UDP).await,
         )),
         None => None,
     };
@@ -178,18 +213,22 @@ pub async fn start_mapping(
 
     match bt_result {
         Ok(lease) => mapped.push(MappedPort {
+            external: effective_bt_external_port,
             internal: bt_port,
             protocol: PortMappingProtocol::TCP,
             lease,
         }),
         Err(e) => {
-            log::warn!("upnp:map-failed port={bt_port} proto=TCP err={e}");
+            log::warn!(
+                "upnp:map-failed external_port={effective_bt_external_port} internal_port={bt_port} proto=TCP err={e}"
+            );
             errors.push(e);
         }
     }
 
     match dht_result {
         Ok(lease) => mapped.push(MappedPort {
+            external: dht_port,
             internal: dht_port,
             protocol: PortMappingProtocol::UDP,
             lease,
@@ -203,6 +242,7 @@ pub async fn start_mapping(
     if let Some((port, result)) = ed2k_result {
         match result {
             Ok(lease) => mapped.push(MappedPort {
+                external: port,
                 internal: port,
                 protocol: PortMappingProtocol::TCP,
                 lease,
@@ -217,6 +257,7 @@ pub async fn start_mapping(
     if let Some((port, result)) = ed2k_udp_result {
         match result {
             Ok(lease) => mapped.push(MappedPort {
+                external: port,
                 internal: port,
                 protocol: PortMappingProtocol::UDP,
                 lease,
@@ -236,7 +277,7 @@ pub async fn start_mapping(
         "upnp:mapped ports={:?}",
         mapped
             .iter()
-            .map(|p| format!("{}:{:?}", p.internal, p.protocol))
+            .map(|p| format!("{}->{}:{:?}", p.external, p.internal, p.protocol))
             .collect::<Vec<_>>()
     );
 
@@ -266,7 +307,8 @@ pub async fn start_mapping(
         "externalIp": external_ip,
         "mappedPorts": mapped.iter().map(|p| {
             serde_json::json!({
-                "port": p.internal,
+                "externalPort": p.external,
+                "internalPort": p.internal,
                 "protocol": format!("{:?}", p.protocol),
             })
         }).collect::<Vec<_>>(),
@@ -303,13 +345,13 @@ async fn stop_mapping_inner(state: &UpnpState) {
     // Best-effort unmap — don't fail if the gateway is unreachable.
     if let Ok(gw) = discover_gateway().await {
         for port in &ports {
-            let _ = unmap_port(&gw, port.internal, port.protocol).await;
+            let _ = unmap_port(&gw, port.external, port.protocol).await;
         }
         log::info!(
             "upnp:unmapped ports={:?}",
             ports
                 .iter()
-                .map(|p| format!("{}:{:?}", p.internal, p.protocol))
+                .map(|p| format!("{}->{}:{:?}", p.external, p.internal, p.protocol))
                 .collect::<Vec<_>>()
         );
     }
@@ -329,7 +371,8 @@ pub fn get_status(state: &UpnpState) -> serde_json::Value {
         .iter()
         .map(|p| {
             serde_json::json!({
-                "port": p.internal,
+                "externalPort": p.external,
+                "internalPort": p.internal,
                 "protocol": format!("{:?}", p.protocol),
             })
         })
@@ -368,9 +411,12 @@ async fn renewal_loop(ports: Vec<MappedPort>) {
         let local_ip = detect_local_ip(&gw.addr);
 
         for port in &ports {
-            if let Err(e) = map_port(&gw, local_ip, port.internal, port.protocol).await {
+            if let Err(e) =
+                map_port(&gw, local_ip, port.external, port.internal, port.protocol).await
+            {
                 log::warn!(
-                    "[UPnP] renewal: failed to renew port {} ({:?}): {e}",
+                    "[UPnP] renewal: failed to renew external port {} to internal port {} ({:?}): {e}",
+                    port.external,
                     port.internal,
                     port.protocol
                 );
@@ -405,11 +451,13 @@ mod tests {
         {
             let mut inner = state.inner.lock().expect("lock not poisoned");
             inner.mapped_ports.push(MappedPort {
+                external: 6881,
                 internal: 6881,
                 protocol: PortMappingProtocol::TCP,
                 lease: MappingLease::Temporary,
             });
             inner.mapped_ports.push(MappedPort {
+                external: 16882,
                 internal: 6882,
                 protocol: PortMappingProtocol::UDP,
                 lease: MappingLease::Temporary,
@@ -419,9 +467,11 @@ mod tests {
         assert_eq!(status["active"], true);
         let ports = status["ports"].as_array().expect("ports is array");
         assert_eq!(ports.len(), 2);
-        assert_eq!(ports[0]["port"], 6881);
+        assert_eq!(ports[0]["externalPort"], 6881);
+        assert_eq!(ports[0]["internalPort"], 6881);
         assert_eq!(ports[0]["protocol"], "TCP");
-        assert_eq!(ports[1]["port"], 6882);
+        assert_eq!(ports[1]["externalPort"], 16882);
+        assert_eq!(ports[1]["internalPort"], 6882);
         assert_eq!(ports[1]["protocol"], "UDP");
     }
 
@@ -447,11 +497,13 @@ mod tests {
     #[test]
     fn renewal_ports_excludes_permanent_mappings() {
         let temporary = MappedPort {
+            external: 16881,
             internal: 6881,
             protocol: PortMappingProtocol::TCP,
             lease: MappingLease::Temporary,
         };
         let permanent = MappedPort {
+            external: 16882,
             internal: 6882,
             protocol: PortMappingProtocol::UDP,
             lease: MappingLease::Permanent,
@@ -461,6 +513,7 @@ mod tests {
 
         assert_eq!(ports.len(), 1);
         assert_eq!(ports[0].internal, temporary.internal);
+        assert_eq!(ports[0].external, temporary.external);
         assert!(matches!(ports[0].lease, MappingLease::Temporary));
     }
 }

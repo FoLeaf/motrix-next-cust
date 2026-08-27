@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="660" height="400" viewBox="0 0 660 400">
+  <defs>
+    <linearGradient id="trail" x1="260" y1="0" x2="418" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0B429" stop-opacity="0" />
+      <stop offset="0.42" stop-color="#B07F0A" stop-opacity="0.4" />
+      <stop offset="1" stop-color="#B07F0A" stop-opacity="0.92" />
+    </linearGradient>
+    <radialGradient id="target" cx="0" cy="0" r="1" gradientTransform="translate(480 170) rotate(90) scale(92)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0B429" stop-opacity="0.13" />
+      <stop offset="0.68" stop-color="#F0B429" stop-opacity="0.04" />
+      <stop offset="1" stop-color="#F0B429" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <rect width="660" height="400" fill="#FFFFFF" />
+  <circle cx="480" cy="170" r="92" fill="url(#target)" />
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M268 150H393" stroke="url(#trail)" stroke-width="4" />
+    <path d="M252 170H410" stroke="url(#trail)" stroke-width="6" />
+    <path d="M268 190H393" stroke="url(#trail)" stroke-width="4" />
+    <path d="M386 136L420 170L386 204" stroke="#B07F0A" stroke-opacity="0.92" stroke-width="7" />
+
+    <path d="M421 116H406V131" stroke="#F0B429" stroke-opacity="0.42" stroke-width="3" />
+    <path d="M539 116H554V131" stroke="#F0B429" stroke-opacity="0.42" stroke-width="3" />
+    <path d="M421 224H406V209" stroke="#F0B429" stroke-opacity="0.42" stroke-width="3" />
+    <path d="M539 224H554V209" stroke="#F0B429" stroke-opacity="0.42" stroke-width="3" />
+  </g>
+</svg>

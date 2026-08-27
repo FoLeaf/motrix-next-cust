@@ -2,7 +2,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import router from './router'
-import { i18n } from '@/composables/useLocale'
+import { i18n, loadLocale, SUPPORTED_LOCALES } from '@/composables/useLocale'
 import { setI18nLocale } from '@shared/utils/i18n'
 import { usePreferenceStore } from './stores/preference'
 import { useTaskStore } from './stores/task'
@@ -21,7 +21,7 @@ import { logger } from '@shared/logger'
 import { getErrorMessage } from '@shared/utils/errorMessage'
 import { resolveUserVisibleDownloadDir, shouldPersistResolvedDownloadDir } from '@shared/utils/userVisibleDirectory'
 import { getUpdateProxy } from '@/composables/useUpdateFlow'
-import { resolveAppProxyUrl } from '@shared/utils/appProxyPolicy'
+import { resolveAppProxyUrl } from '@shared/utils/proxy'
 import { checkSyncDue } from '@shared/utils/syncSchedule'
 import type { AppConfig, TauriUpdate } from '@shared/types'
 import App from './App.vue'
@@ -315,7 +315,7 @@ if (import.meta.env.PROD) {
       // detect the OS locale and resolve to the closest available match.
       try {
         const raw = (await getLocale()) || 'en-US'
-        resolvedLocale = resolveSystemLocale(raw, i18n.global.availableLocales)
+        resolvedLocale = resolveSystemLocale(raw, SUPPORTED_LOCALES)
       } catch (e) {
         logger.debug('main.locale', e)
         resolvedLocale = 'en-US'
@@ -336,7 +336,9 @@ if (import.meta.env.PROD) {
 
     // Apply resolved locale to vue-i18n and expose it on the store
     // so downstream consumers (direction, General.vue) can read it.
+    // Locale messages are lazily loaded — only en-US ships in the main bundle.
     if (resolvedLocale) {
+      await loadLocale(resolvedLocale)
       setI18nLocale(i18n, resolvedLocale)
     }
 
@@ -377,6 +379,7 @@ if (import.meta.env.PROD) {
         .then(({ invoke }) =>
           invoke('start_upnp_mapping', {
             btPort: Number(config.listenPort) || BT_LISTEN_PORT,
+            btExternalPort: Number(config.btExternalPort) || 0,
             dhtPort: Number(config.dhtListenPort) || DHT_LISTEN_PORT,
             ed2kPort: Number(config.ed2kListenPort) > 0 ? Number(config.ed2kListenPort) : null,
             ed2kUdpPort: Number(config.ed2kUdpListenPort) > 0 ? Number(config.ed2kUdpListenPort) : null,

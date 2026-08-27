@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** @fileoverview Network preference tab: proxy, ports, user-agent, timeouts, file allocation. */
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from 'vue-i18n'
 import { usePreferenceStore } from '@/stores/preference'
@@ -12,16 +12,13 @@ import { logger } from '@shared/logger'
 import { getErrorMessage } from '@shared/utils/errorMessage'
 import { useAppMessage } from '@/composables/useAppMessage'
 import { PROXY_SCOPE_OPTIONS, FILE_ALLOCATION_OPTIONS, ENGINE_RPC_PORT } from '@shared/constants'
-import { diffConfig, checkIsNeedRestart } from '@shared/utils/config'
 import {
   buildNetworkForm,
   buildNetworkSystemConfig,
   transformNetworkForStore,
   validateNetworkForm,
-  randomBtPort,
-  randomDhtPort,
 } from '@/composables/useNetworkPreference'
-import { proxySwitchValueToMode } from '@shared/utils/proxyPolicy'
+import { proxySwitchValueToMode } from '@shared/utils/proxy'
 
 import userAgentMap from '@shared/ua'
 import { hasUnsafeHeaderChars, sanitizeHeaderValue } from '@shared/utils/headerSanitize'
@@ -38,18 +35,14 @@ import {
   NDivider,
   NIcon,
   NText,
-  NCollapseTransition,
-  NRadioButton,
-  NRadioGroup,
   useDialog,
 } from 'naive-ui'
-const needsRestart = ref(false)
 const showUserAgentManager = ref(false)
 import PreferenceActionBar from './PreferenceActionBar.vue'
 import PreferenceCheckboxGrid from './PreferenceCheckboxGrid.vue'
 import PreferenceHintLabel from './PreferenceHintLabel.vue'
 import UserAgentManager from './UserAgentManager.vue'
-import { SearchOutline, DiceOutline } from '@vicons/ionicons5'
+import { SearchOutline } from '@vicons/ionicons5'
 
 const { t } = useI18n()
 const preferenceStore = usePreferenceStore()
@@ -117,81 +110,30 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot, patchSnapshot } =
   buildForm,
   buildSystemConfig: buildNetworkSystemConfig,
   transformForStore: transformNetworkForStore,
-  beforeSave: async (f) => {
+  beforeSave: (f) => {
     const validationKey = validateNetworkForm(f)
     if (validationKey) {
       message.error(t(validationKey))
       return false
     }
-
-    // Gate: engine restart confirmation (BT/DHT port change).
-    // Must confirm BEFORE saving — declining cancels the entire save so
-    // config.json never contains values the running engine doesn't match.
-    const changed = diffConfig(preferenceStore.config, f)
-    if (checkIsNeedRestart(changed)) {
-      const ok = await new Promise<boolean>((resolve) => {
-        dialog.warning({
-          title: t('preferences.engine-restart-title'),
-          content: t('preferences.engine-restart-confirm'),
-          positiveText: t('preferences.engine-restart-now'),
-          negativeText: t('app.cancel'),
-          maskClosable: false,
-          onPositiveClick: () => resolve(true),
-          onNegativeClick: () => resolve(false),
-          onClose: () => resolve(false),
-        })
-      })
-      if (!ok) return false
-      needsRestart.value = true
-    }
-
     return true
   },
   afterSave: async (f, prevConfig) => {
-    // Sync UPnP mapping state after save
-    if (
-      f.enableUpnp !== prevConfig.enableUpnp ||
-      (f.enableUpnp && (f.listenPort !== prevConfig.listenPort || f.dhtListenPort !== prevConfig.dhtListenPort))
-    ) {
-      syncUpnpState(
-        !!f.enableUpnp,
-        f.listenPort,
-        f.dhtListenPort,
-        preferenceStore.config.ed2kListenPort,
-        preferenceStore.config.ed2kUdpListenPort,
-      )
-    }
-
-    // Engine restart — user already confirmed in beforeSave, execute immediately.
-    if (needsRestart.value) {
-      needsRestart.value = false
-      const port = (preferenceStore.config.rpcListenPort as number) || ENGINE_RPC_PORT
-      const secret = (preferenceStore.config.rpcSecret as string) || ''
-      message.info(t('preferences.engine-restarting'))
-      await nextTick()
-      await new Promise((r) => requestAnimationFrame(r))
-      await restartEngine({ port, secret })
-    }
+    if (f.enableUpnp !== prevConfig.enableUpnp) await syncUpnpState(!!f.enableUpnp)
   },
 })
 
-// ── Port randomization ──────────────────────────────────────────────
-function onBtPortDice() {
-  form.value.listenPort = randomBtPort()
-}
-function onDhtPortDice() {
-  form.value.dhtListenPort = randomDhtPort()
-}
-
 // ── UPnP save-time sync ─────────────────────────────────────────────
-async function syncUpnpState(enabled: boolean, btPort: number, dhtPort: number, ed2kPort: number, ed2kUdpPort: number) {
+async function syncUpnpState(enabled: boolean) {
+  const config = preferenceStore.config
   try {
     if (enabled) {
       await invoke('start_upnp_mapping', {
-        btPort,
-        dhtPort,
-        ed2kPort: ed2kPort > 0 ? ed2kPort : null,
-        ed2kUdpPort: ed2kUdpPort > 0 ? ed2kUdpPort : null,
+        btPort: Number(config.listenPort),
+        btExternalPort: Number(config.btExternalPort) || 0,
+        dhtPort: Number(config.dhtListenPort),
+        ed2kPort: Number(config.ed2kListenPort) > 0 ? Number(config.ed2kListenPort) : null,
+        ed2kUdpPort: Number(config.ed2kUdpListenPort) > 0 ? Number(config.ed2kUdpListenPort) : null,
       })
     } else {
       await invoke('stop_upnp_mapping')
@@ -245,7 +187,7 @@ function handleProxySwitch(value: boolean) {
 function handleManualRestart() {
   const port = (preferenceStore.config.rpcListenPort as number) || ENGINE_RPC_PORT
   const secret = (preferenceStore.config.rpcSecret as string) || ''
-  const d = dialog.warning({
+  const d = dialog.info({
     title: t('preferences.engine-restart-title'),
     content: t('preferences.engine-restart-manual-confirm'),
     positiveText: t('preferences.engine-restart-now'),
@@ -302,7 +244,7 @@ onMounted(() => {
               <NButton @click="changeUA('safari')">Safari</NButton>
               <NButton @click="changeUA('firefox')">Firefox</NButton>
             </NButtonGroup>
-            <NButton class="ua-reset-btn" size="small" ghost @click="form.userAgent = ''">
+            <NButton type="error" size="small" ghost @click="form.userAgent = ''">
               {{ t('preferences.ua-reset') }}
             </NButton>
           </div>
@@ -424,66 +366,11 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Ports -->
+        <!-- Port mapping -->
         <NDivider title-placement="left">{{ t('preferences.port') }}</NDivider>
         <NFormItem label="UPnP/NAT-PMP">
           <NSwitch v-model:value="form.enableUpnp" />
         </NFormItem>
-        <NFormItem :label="t('preferences.bt-port')">
-          <NInputGroup>
-            <NInputNumber v-model:value="form.listenPort" :min="1024" :max="65535" class="pref-port" />
-            <NButton class="pref-icon-button" @click="onBtPortDice">
-              <template #icon>
-                <NIcon :size="14"><DiceOutline /></NIcon>
-              </template>
-            </NButton>
-          </NInputGroup>
-        </NFormItem>
-        <NFormItem :label="t('preferences.dht-port')">
-          <NInputGroup>
-            <NInputNumber v-model:value="form.dhtListenPort" :min="1024" :max="65535" class="pref-port" />
-            <NButton class="pref-icon-button" @click="onDhtPortDice">
-              <template #icon>
-                <NIcon :size="14"><DiceOutline /></NIcon>
-              </template>
-            </NButton>
-          </NInputGroup>
-        </NFormItem>
-
-        <!-- P2P Sharing -->
-        <NDivider title-placement="left">{{ t('preferences.p2p-sharing-section') }}</NDivider>
-        <NFormItem>
-          <template #label>
-            <PreferenceHintLabel
-              :label="t('preferences.sharing-mode')"
-              :hint="t('preferences.sharing-mode-scope-hint')"
-            />
-          </template>
-          <NRadioGroup v-model:value="form.sharingMode" size="small">
-            <NRadioButton value="stop-by-condition">
-              {{ t('preferences.sharing-mode-stop-by-condition') }}
-            </NRadioButton>
-            <NRadioButton value="manual-stop">{{ t('preferences.sharing-mode-manual-stop') }}</NRadioButton>
-          </NRadioGroup>
-        </NFormItem>
-        <NCollapseTransition :show="form.sharingMode === 'stop-by-condition'" class="collapse-indent">
-          <NFormItem :label="t('preferences.share-ratio')">
-            <NInputNumber v-model:value="form.shareRatio" :min="1" :max="100" :step="0.1" class="pref-number" />
-          </NFormItem>
-          <NFormItem :label="t('preferences.share-time') + ' (' + t('preferences.share-time-unit') + ')'">
-            <NInputNumber v-model:value="form.shareTime" :min="60" :max="525600" class="pref-number" />
-          </NFormItem>
-        </NCollapseTransition>
-        <NCollapseTransition :show="form.sharingMode === 'manual-stop'" class="collapse-indent">
-          <NFormItem>
-            <template #label>
-              <PreferenceHintLabel
-                :label="t('preferences.sharing-mode-manual-stop')"
-                :hint="t('preferences.sharing-mode-manual-stop-tips')"
-              />
-            </template>
-          </NFormItem>
-        </NCollapseTransition>
 
         <!-- Timeout & Disk -->
         <NDivider title-placement="left">{{ t('preferences.transfer-params') }}</NDivider>
@@ -609,7 +496,7 @@ onMounted(() => {
   padding: 8px 12px;
   margin-top: 6px;
   border-radius: var(--border-radius);
-  background: var(--m3-error-container-bg);
+  background: var(--m3-error-container);
   opacity: 0;
   transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -618,25 +505,7 @@ onMounted(() => {
 }
 .ua-warn-text {
   font-size: var(--font-size-sm);
-  color: var(--m3-error);
+  color: var(--m3-on-error-container);
   flex: 1;
-}
-.ua-reset-btn {
-  --btn-muted: #c97070;
-  color: var(--btn-muted) !important;
-  transition:
-    color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    background-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.ua-reset-btn:hover {
-  background-color: color-mix(in srgb, var(--btn-muted) 12%, transparent) !important;
-}
-.ua-reset-btn :deep(.n-button__border) {
-  border-color: var(--btn-muted) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.ua-reset-btn :deep(.n-button__state-border) {
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 </style>

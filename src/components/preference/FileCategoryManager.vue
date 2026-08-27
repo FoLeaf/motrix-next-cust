@@ -662,7 +662,7 @@ onUnmounted(() => {
 }
 
 .category-manager-drag-handle:hover {
-  color: var(--color-primary);
+  color: var(--m3-primary);
   background: var(--m3-surface-container-highest);
 }
 
@@ -678,11 +678,11 @@ onUnmounted(() => {
 }
 
 .category-manager-list-item:hover {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
 }
 
 .category-manager-list-item--active {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
   background: var(--m3-surface-container-high);
 }
 
@@ -785,7 +785,7 @@ onUnmounted(() => {
 }
 
 .category-manager-reset-button--confirm {
-  background: color-mix(in srgb, var(--n-error-color) 14%, transparent);
+  background: color-mix(in srgb, var(--m3-error) 14%, transparent);
 }
 
 .category-manager-reset-content {

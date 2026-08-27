@@ -77,9 +77,6 @@ function createMockApi(): TaskApi {
     forcePauseTask: vi.fn().mockResolvedValue('OK'),
     pauseTask: vi.fn().mockResolvedValue('OK'),
     resumeTask: vi.fn().mockResolvedValue('OK'),
-    pauseAllTask: vi.fn().mockResolvedValue('OK'),
-    forcePauseAllTask: vi.fn().mockResolvedValue('OK'),
-    resumeAllTask: vi.fn().mockResolvedValue('OK'),
     batchResumeTask: vi.fn().mockResolvedValue([]),
     batchPauseTask: vi.fn().mockResolvedValue([]),
     batchForcePauseTask: vi.fn().mockResolvedValue([]),
@@ -231,7 +228,7 @@ describe('cancelMagnetSelectionDownload', () => {
     expect(api.removeTaskRecord).toHaveBeenNthCalledWith(2, { gid: 'child-gid' })
     expect(api.removeTaskRecord).toHaveBeenNthCalledWith(3, { gid: 'metadata-gid' })
     expect(mockCleanupAria2ControlFiles).toHaveBeenCalledWith(childTask)
-    expect(mockDeleteTaskFiles).toHaveBeenCalledWith(childTask)
+    expect(mockDeleteTaskFiles).toHaveBeenCalledWith(childTask, 'trash')
     expect(mockCleanupAria2MetadataFiles).toHaveBeenCalledWith('/downloads', 'abcdef1234567890abcdef1234567890abcdef12')
     expect(mockRemoveRecord).toHaveBeenCalledWith('child-gid')
     expect(mockRemoveRecord).toHaveBeenCalledWith('metadata-gid')
@@ -328,6 +325,40 @@ describe('resumeTask', () => {
     expect(deps.fetchList).toHaveBeenCalledOnce()
     expect(api.saveSession).toHaveBeenCalledOnce()
   })
+
+  it('keeps a resolved magnet paused until file selection is applied', async () => {
+    const task = makeTask({
+      gid: 'magnet-download',
+      status: TASK_STATUS.PAUSED,
+      following: 'metadata-gid',
+      bittorrent: { info: { name: 'Archive' } },
+      files: [{ index: '1', path: '/downloads/file.bin', length: '1024' }],
+    })
+
+    await expect(ops.resumeTask(task)).resolves.toBe(false)
+    expect(api.getOption).toHaveBeenCalledWith({ gid: 'magnet-download' })
+    expect(api.resumeTask).not.toHaveBeenCalled()
+  })
+
+  it('applies magnet file selection before resuming the paused task', async () => {
+    const calls: string[] = []
+    vi.mocked(api.changeOption).mockImplementation(async () => {
+      calls.push('select')
+    })
+    vi.mocked(api.resumeTask).mockImplementation(async () => {
+      calls.push('resume')
+      return 'OK'
+    })
+    const task = makeTask({ gid: 'magnet-download', status: TASK_STATUS.PAUSED })
+
+    await ops.applyMagnetFileSelection(task, '2-9')
+
+    expect(api.changeOption).toHaveBeenCalledWith({
+      gid: 'magnet-download',
+      options: { 'select-file': '2-9' },
+    })
+    expect(calls).toEqual(['select', 'resume'])
+  })
 })
 
 // ═══════════════════════════════════════════════════════════════════
@@ -383,26 +414,17 @@ describe('pauseAllTask', () => {
     const ops = createTaskOperations(deps)
     await ops.pauseAllTask()
     expect(api.forcePauseTask).not.toHaveBeenCalled()
-    expect(api.forcePauseAllTask).not.toHaveBeenCalled()
-  })
-
-  it('does not call forcePauseAllTask (replaced by per-task calls)', async () => {
-    const api = createMockApi()
-    const deps = createDeps(api)
-    deps.taskList.value = [makeTask({ gid: 'dl-1', status: TASK_STATUS.ACTIVE })] as Aria2Task[]
-    const ops = createTaskOperations(deps)
-    await ops.pauseAllTask()
-    expect(api.forcePauseAllTask).not.toHaveBeenCalled()
   })
 })
 
 describe('resumeAllTask', () => {
-  it('calls resumeAllTask, then refreshes and saves', async () => {
+  it('resumes eligible paused tasks, then refreshes and saves', async () => {
     const api = createMockApi()
     const deps = createDeps(api)
+    deps.taskList.value = [makeTask({ gid: 'paused-1', status: TASK_STATUS.PAUSED })]
     const ops = createTaskOperations(deps)
-    await ops.resumeAllTask()
-    expect(api.resumeAllTask).toHaveBeenCalledOnce()
+    await expect(ops.resumeAllTask()).resolves.toEqual({ resumed: 1, blocked: 0 })
+    expect(api.batchResumeTask).toHaveBeenCalledWith({ gids: ['paused-1'] })
     expect(deps.fetchList).toHaveBeenCalledOnce()
     expect(api.saveSession).toHaveBeenCalledOnce()
   })

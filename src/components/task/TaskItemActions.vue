@@ -278,7 +278,7 @@ function onRelease(ev: PointerEvent) {
   border-radius: 13px;
 }
 .task-item-action:hover {
-  color: var(--color-primary);
+  color: var(--m3-primary);
 }
 .task-item-action.pressed {
   transform: scale(0.85);

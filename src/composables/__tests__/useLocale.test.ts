@@ -45,27 +45,28 @@ describe('useLocale', () => {
     expect(typeof result.setLocale).toBe('function')
   })
 
-  it('setLocale changes the active locale on the real i18n instance', () => {
+  it('setLocale loads messages and changes the active locale', async () => {
     const { setLocale } = useLocale()
 
     // Record initial locale
     const initialLocale = (i18n.global.locale as unknown as { value: string }).value
     expect(initialLocale).toBe('en-US')
 
-    // Change locale via the real function
-    setLocale('zh-CN')
+    // Change locale via the real function (lazily loads zh-CN messages)
+    await setLocale('zh-CN')
 
     const newLocale = (i18n.global.locale as unknown as { value: string }).value
     expect(newLocale).toBe('zh-CN')
+    expect(i18n.global.availableLocales).toContain('zh-CN')
 
     // Restore for other tests
-    setLocale('en-US')
+    await setLocale('en-US')
   })
 
-  it('setLocale is idempotent for same locale', () => {
+  it('setLocale is idempotent for same locale', async () => {
     const { setLocale } = useLocale()
-    setLocale('en-US')
-    setLocale('en-US')
+    await setLocale('en-US')
+    await setLocale('en-US')
     const locale = (i18n.global.locale as unknown as { value: string }).value
     expect(locale).toBe('en-US')
   })

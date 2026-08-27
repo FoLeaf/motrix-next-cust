@@ -1,3 +1,8 @@
+/** @fileoverview Dependency-free color-scheme config helpers.
+ *
+ * Kept separate from colorScheme.ts (which pulls in the heavy
+ * @material/material-color-utilities library) so that the config
+ * hydration / preference store path stays free of that dependency. */
 import { COLOR_SCHEMES, CUSTOM_COLOR_SCHEME_ID, DEFAULT_CUSTOM_COLOR_SCHEME } from '@shared/constants'
 
 const HEX_COLOR_RE = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i

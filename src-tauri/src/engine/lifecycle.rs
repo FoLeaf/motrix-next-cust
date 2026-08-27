@@ -3,7 +3,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
-use super::args::build_start_args_with_ed2k_bootstrap;
+use super::args::{build_start_args_with_managed_paths, ManagedEnginePaths};
 use super::cleanup::cleanup_port;
 use super::state::{path_to_safe_string, strip_ansi, EngineState};
 use super::{valid_aria2_log_level, DEFAULT_ARIA2_LOG_LEVEL};
@@ -56,7 +56,7 @@ fn engine_log_config(app: &tauri::AppHandle) -> Result<(String, String), String>
         .path()
         .app_log_dir()
         .map_err(|e| format!("Failed to get app log dir: {e}"))?
-        .join("aria2-next.log");
+        .join(crate::log_policy::ARIA2_LOG_FILE);
     let log_path = path_to_safe_string(&log_path);
     let log_level = read_aria2_log_level(app);
     Ok((log_path, log_level))
@@ -217,7 +217,9 @@ pub fn start_engine(app: &tauri::AppHandle, config: &serde_json::Value) -> Resul
     let (log_file_path, log_level) = engine_log_config(app)?;
     let ed2k_bootstrap = crate::commands::ed2k::ensure_ed2k_bootstrap_cache(app)
         .map_err(|e| format!("Failed to prepare ED2K bootstrap cache: {e}"))?;
-    let args = build_start_args_with_ed2k_bootstrap(
+    let bt_peer_blocklist = crate::commands::bt_blocklist::startup_blocklist_path(app)
+        .map_err(|e| format!("Failed to prepare BT peer blocklist: {e}"))?;
+    let args = build_start_args_with_managed_paths(
         &config,
         if conf_path.exists() {
             log::info!("loading engine config: {}", conf_str);
@@ -233,7 +235,10 @@ pub fn start_engine(app: &tauri::AppHandle, config: &serde_json::Value) -> Resul
         session_path.exists(),
         &log_file_path,
         &log_level,
-        Some((ed2k_bootstrap.0.as_str(), ed2k_bootstrap.1.as_str())),
+        ManagedEnginePaths {
+            ed2k_bootstrap: Some((ed2k_bootstrap.0.as_str(), ed2k_bootstrap.1.as_str())),
+            bt_peer_blocklist: bt_peer_blocklist.as_deref(),
+        },
     );
 
     let sidecar = app
@@ -444,7 +449,9 @@ pub fn restart_engine(app: &tauri::AppHandle, _config: &serde_json::Value) -> Re
     let (log_file_path, log_level) = engine_log_config(app)?;
     let ed2k_bootstrap = crate::commands::ed2k::ensure_ed2k_bootstrap_cache(app)
         .map_err(|e| format!("Failed to prepare ED2K bootstrap cache: {e}"))?;
-    let args = build_start_args_with_ed2k_bootstrap(
+    let bt_peer_blocklist = crate::commands::bt_blocklist::startup_blocklist_path(app)
+        .map_err(|e| format!("Failed to prepare BT peer blocklist: {e}"))?;
+    let args = build_start_args_with_managed_paths(
         &config,
         if conf_path.exists() {
             log::info!("restart: loading engine config: {}", conf_str);
@@ -460,7 +467,10 @@ pub fn restart_engine(app: &tauri::AppHandle, _config: &serde_json::Value) -> Re
         session_path.exists(),
         &log_file_path,
         &log_level,
-        Some((ed2k_bootstrap.0.as_str(), ed2k_bootstrap.1.as_str())),
+        ManagedEnginePaths {
+            ed2k_bootstrap: Some((ed2k_bootstrap.0.as_str(), ed2k_bootstrap.1.as_str())),
+            bt_peer_blocklist: bt_peer_blocklist.as_deref(),
+        },
     );
 
     let sidecar = app

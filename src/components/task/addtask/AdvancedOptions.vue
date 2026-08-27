@@ -7,7 +7,7 @@ import { hasUnsafeHeaderChars, sanitizeHeaderValue } from '@shared/utils/headerS
 import { useSystemProxyDetect } from '@/composables/useSystemProxyDetect'
 import { useAppMessage } from '@/composables/useAppMessage'
 import { SearchOutline } from '@vicons/ionicons5'
-import type { TaskProxyMode } from '@shared/utils/proxyPolicy'
+import type { TaskProxyMode } from '@shared/utils/proxy'
 import UserAgentPopover from '@/components/common/UserAgentPopover.vue'
 import type { UserAgentProfile, UserAgentRule } from '@shared/types'
 
@@ -222,7 +222,7 @@ const { detecting: detectingProxy, detect: detectProxy } = useSystemProxyDetect(
 }
 .ua-source {
   margin-top: 5px;
-  color: var(--n-text-color-3, var(--m3-on-surface-variant));
+  color: var(--m3-on-surface-variant);
   font-size: var(--font-size-sm);
   opacity: 0;
   transform: translateY(-4px);
@@ -265,7 +265,7 @@ const { detecting: detectingProxy, detect: detectProxy } = useSystemProxyDetect(
   padding: 8px 12px;
   margin-top: 6px;
   border-radius: var(--border-radius);
-  background: var(--m3-error-container-bg);
+  background: var(--m3-error-container);
   opacity: 0;
   transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -274,7 +274,7 @@ const { detecting: detectingProxy, detect: detectProxy } = useSystemProxyDetect(
 }
 .ua-warn-text {
   font-size: var(--font-size-sm);
-  color: var(--m3-error);
+  color: var(--m3-on-error-container);
   flex: 1;
 }
 

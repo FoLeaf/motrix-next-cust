@@ -66,7 +66,7 @@ function shortLabel(dir: string): string {
           <div class="dir-popover-actions">
             <NButton text size="tiny" class="dir-popover-action" @click.stop="onToggleFavorite(dir, true)">
               <template #icon>
-                <NIcon color="var(--color-primary)"><Star /></NIcon>
+                <NIcon color="var(--m3-primary)"><Star /></NIcon>
               </template>
             </NButton>
             <NButton text size="tiny" class="dir-popover-action" @click.stop="onRemove(dir)">
@@ -111,16 +111,16 @@ function shortLabel(dir: string): string {
 
 <style scoped>
 .dir-popover-heading {
-  font-size: var(--font-size-sm, 12px);
+  font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--n-text-color-3, #999);
+  color: var(--n-text-color-3);
   padding: 4px 8px 2px;
   user-select: none;
 }
 .dir-popover-heading--spaced {
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid var(--n-border-color, var(--m3-outline-variant));
+  border-top: 1px solid var(--m3-outline-variant);
 }
 
 .dir-popover-item {
@@ -129,12 +129,12 @@ function shortLabel(dir: string): string {
   justify-content: space-between;
   gap: 4px;
   padding: 5px 8px;
-  border-radius: var(--border-radius, 6px);
+  border-radius: var(--border-radius);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 .dir-popover-item:hover {
-  background: var(--n-color-hover, var(--m3-surface-container-high));
+  background: var(--m3-surface-container-high);
 }
 
 .dir-popover-label {

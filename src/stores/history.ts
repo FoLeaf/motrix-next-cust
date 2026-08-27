@@ -12,7 +12,7 @@ import Database from '@tauri-apps/plugin-sql'
 import { remove } from '@tauri-apps/plugin-fs'
 import { invoke } from '@tauri-apps/api/core'
 import { appDataDir } from '@tauri-apps/api/path'
-import { collectTaskIdentityBuckets } from '@shared/utils/taskIdentity'
+import { collectTaskIdentityBuckets } from '@shared/utils/task'
 import type { Aria2Task, HistoryRecord } from '@shared/types'
 import { logger } from '@shared/logger'
 

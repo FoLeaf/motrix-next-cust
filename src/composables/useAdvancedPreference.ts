@@ -11,12 +11,12 @@ import {
   DEFAULT_APP_CONFIG as D,
 } from '@shared/constants'
 import { generateRandomInt } from '@shared/utils'
-import { isValidAria2ProxyUrl, UNSUPPORTED_PROXY_SCHEME_RE } from '@shared/utils/aria2Proxy'
-import type { AppConfig } from '@shared/types'
-import { buildDownloadProxyOptions, normalizeProxyMode, type EngineProxyMode } from '@shared/utils/proxyPolicy'
+import { isValidAria2ProxyUrl, UNSUPPORTED_PROXY_SCHEME_RE } from '@shared/utils/proxy'
+import type { AppConfig, AppLogLevel, Aria2LogLevel } from '@shared/types'
+import { buildDownloadProxyOptions, normalizeProxyMode, type EngineProxyMode } from '@shared/utils/proxy'
 import { generateConfigSecret } from '@shared/utils/configHydration'
 
-export { isValidAria2ProxyUrl } from '@shared/utils/aria2Proxy'
+export { isValidAria2ProxyUrl } from '@shared/utils/proxy'
 
 // ── Types ───────────────────────────────────────────────────────────
 
@@ -40,11 +40,9 @@ export interface AdvancedForm {
   silentAutoSubmitFromExtension: boolean
   autoChangeConflictingPorts: boolean
   enableUpnp: boolean
-  listenPort: number
-  dhtListenPort: number
   userAgent: string
-  logLevel: string
-  aria2LogLevel: string
+  logLevel: AppLogLevel
+  aria2LogLevel: Aria2LogLevel
   tempFilesDir: string
   hardwareRendering: boolean
   // Clipboard detection (migrated from legacy Basic tab)
@@ -100,8 +98,6 @@ export function buildAdvancedForm(config: AppConfig): {
       silentAutoSubmitFromExtension: config.silentAutoSubmitFromExtension ?? D.silentAutoSubmitFromExtension,
       autoChangeConflictingPorts: config.autoChangeConflictingPorts ?? D.autoChangeConflictingPorts,
       enableUpnp: config.enableUpnp ?? D.enableUpnp,
-      listenPort: Number(config.listenPort ?? D.listenPort),
-      dhtListenPort: Number(config.dhtListenPort ?? D.dhtListenPort),
       userAgent: config.userAgent ?? D.userAgent,
       logLevel: config.logLevel ?? D.logLevel,
       aria2LogLevel: config.aria2LogLevel ?? D.aria2LogLevel,
@@ -132,8 +128,6 @@ export function buildAdvancedSystemConfig(f: AdvancedForm): Record<string, strin
     'rpc-listen-port': String(f.rpcListenPort),
     'allow-remote-access': String(!!f.allowRemoteAccess),
     'rpc-secret': f.rpcSecret,
-    'listen-port': String(f.listenPort),
-    'dht-listen-port': String(f.dhtListenPort),
     'user-agent': f.userAgent || '',
     ...buildDownloadProxyOptions(f.proxy),
   }
@@ -189,13 +183,5 @@ export function validateAdvancedForm(f: AdvancedForm): string | null {
 // ── Port Randomization ──────────────────────────────────────────────
 
 export function randomRpcPort(): number {
-  return generateRandomInt(PORT_RECOVERY_RANGE_START, PORT_RECOVERY_RANGE_END + 1)
-}
-
-export function randomBtPort(): number {
-  return generateRandomInt(PORT_RECOVERY_RANGE_START, PORT_RECOVERY_RANGE_END + 1)
-}
-
-export function randomDhtPort(): number {
   return generateRandomInt(PORT_RECOVERY_RANGE_START, PORT_RECOVERY_RANGE_END + 1)
 }

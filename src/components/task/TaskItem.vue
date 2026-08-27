@@ -56,36 +56,31 @@ const {
   transferSummary,
 } = useTaskCardModel(taskRef)
 
-/** Reads a CSS variable from :root, returning the fallback if unavailable. */
-function cssVar(name: string, fallback: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+const statusColorMap: Record<string, string> = {
+  active: 'var(--m3-status-active)',
+  waiting: 'var(--m3-status-waiting)',
+  paused: 'var(--m3-status-paused)',
+  error: 'var(--m3-status-error)',
+  complete: 'var(--m3-status-success)',
+  removed: 'var(--m3-status-paused)',
+  sharing: 'var(--m3-status-success)',
 }
 
-const statusColorMap = computed<Record<string, string>>(() => ({
-  active: cssVar('--m3-status-active', ''),
-  waiting: cssVar('--m3-status-waiting', ''),
-  paused: cssVar('--m3-status-paused', '#909399'),
-  error: cssVar('--m3-status-error', '#F56C6C'),
-  complete: cssVar('--m3-status-success', '#67C23A'),
-  removed: cssVar('--m3-status-paused', '#909399'),
-  sharing: cssVar('--m3-status-success', '#67C23A'),
-}))
-
-const progressColor = computed(() => statusColorMap.value[taskStatus.value] || cssVar('--m3-status-active', ''))
+const progressColor = computed(() => statusColorMap[taskStatus.value] || 'var(--m3-status-active)')
 const hasStatusLine = computed(() => Boolean(statusBadge.value || fileMissing.value))
 
 const statusBadgeStyle = computed(() => {
   switch (statusBadge.value?.tone) {
     case 'success':
-      return { color: cssVar('--m3-status-success', '#67C23A') }
+      return { color: 'var(--m3-status-success)' }
     case 'error':
-      return { color: cssVar('--m3-status-error', '#F56C6C') }
+      return { color: 'var(--m3-status-error)' }
     case 'waiting':
-      return { color: cssVar('--m3-status-waiting', '') }
+      return { color: 'var(--m3-status-waiting)' }
     case 'muted':
-      return { color: cssVar('--m3-status-paused', '#909399') }
+      return { color: 'var(--m3-status-paused)' }
     default:
-      return { color: cssVar('--m3-status-paused', '#909399') }
+      return { color: 'var(--m3-status-paused)' }
   }
 })
 
@@ -170,7 +165,6 @@ onBeforeUnmount(() => {
     ref="cardRef"
     class="task-item"
     :class="{
-      'file-missing': fileMissing,
       'is-sharing': isSharing,
       'sharing-enter': sharingEnter,
     }"
@@ -351,7 +345,7 @@ onBeforeUnmount(() => {
 /* The release uses M3 emphasized-decelerate for organic overshoot.     */
 .task-item.pressed {
   transform: scale(0.98);
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
   transition:
     transform 0.15s cubic-bezier(0.2, 0, 0, 1),
     border-color 0.15s;
@@ -428,10 +422,7 @@ onBeforeUnmount(() => {
     transform: translateY(0);
   }
 }
-.task-item.file-missing {
-  border-color: var(--m3-error-container-bg);
-}
-/* M3 progress-bar color transition (amber → green on status change) */
+/* M3 progress-bar transition between semantic status colors. */
 .task-progress :deep(.n-progress-graph-line-fill) {
   transition: background-color 0.5s cubic-bezier(0.2, 0, 0, 1);
 }

@@ -53,6 +53,12 @@ export interface TaskTransferSummary {
   ratio: number
 }
 
+export function getTaskDetailStatusLabelKey(status: string | undefined): string {
+  return status === 'seeding' || status === 'sharing' || status === 'bt-metadata-fetching'
+    ? `task.${status}`
+    : `task.status-${status}`
+}
+
 export function buildTaskDetailKind(task: Aria2Task | null | undefined): TaskDetailKind {
   if (task?.bittorrent) return 'bt'
   if (task?.ed2k) return 'ed2k'

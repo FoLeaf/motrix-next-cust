@@ -29,6 +29,8 @@ export interface MagnetFileItem {
   length: number
 }
 
+export type MagnetSelectionSubmission = 'confirm' | 'cancel' | null
+
 /** Convert raw Aria2File array into UI-friendly selection items. */
 export function parseFilesForSelection(files: Aria2File[]): MagnetFileItem[] {
   return files.map((f) => {
@@ -65,16 +67,24 @@ export function shouldShowFileSelection(config: { pauseMetadata?: boolean | stri
   return config.pauseMetadata !== false && config.pauseMetadata !== 'false'
 }
 
+function isPendingMagnetSelectionTask(task: Aria2Task): boolean {
+  return Boolean(
+    task.bittorrent &&
+    task.status === 'paused' &&
+    task.bittorrent.info?.name &&
+    task.following &&
+    task.files.some((file) => Number(file.length) > 0),
+  )
+}
+
 export function getPendingMagnetSelectionGids(tasks: Aria2Task[]): string[] {
   return tasks
-    .map((task) => {
-      if (!task.bittorrent || task.status !== 'paused') return false
-      if (!task.bittorrent.info?.name) return false
-      if (!task.following) return false
-      if (!task.files.some((file) => Number(file.length) > 0)) return false
-      return task.following
-    })
+    .map((task) => (isPendingMagnetSelectionTask(task) ? task.following : false))
     .filter((gid): gid is string => typeof gid === 'string' && gid.length > 0)
+}
+
+export function findPendingMagnetSelectionTask(tasks: Aria2Task[], metadataGid: string): Aria2Task | undefined {
+  return tasks.find((task) => isPendingMagnetSelectionTask(task) && task.following === metadataGid)
 }
 
 export interface MagnetSelectionResolution {
@@ -88,36 +98,5 @@ export function getResolvedMagnetSelection(task: Aria2Task): MagnetSelectionReso
   return {
     metadataGid: task.gid,
     downloadGid,
-  }
-}
-
-/** Actions needed to apply file selection to a download based on its current status. */
-export interface ConfirmAction {
-  /** Whether the task must be resumed after applying options. */
-  needsResume: boolean
-}
-
-/**
- * Determines the correct pause/resume actions for applying file selection
- * to a magnet download based on its current aria2 task status.
- *
- * - paused:   standard case with pause-metadata=true — just resume
- * - waiting:  queued task — already eligible to start when a slot opens
- * - active:   engine failed to honor pause-metadata — do not race pause/unpause
- * - complete/removed/error: terminal states — no action needed
- * - undefined: safe fallback — treat as resumable
- */
-export function buildStatusAwareConfirmAction(status: string | undefined): ConfirmAction {
-  switch (status) {
-    case 'paused':
-    case undefined:
-      return { needsResume: true }
-    case 'waiting':
-    case 'active':
-    case 'complete':
-    case 'removed':
-    case 'error':
-    default:
-      return { needsResume: false }
   }
 }

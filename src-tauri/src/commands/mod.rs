@@ -1,4 +1,5 @@
 pub mod aria2;
+pub mod bt_blocklist;
 pub mod config;
 pub mod ed2k;
 pub mod engine;
@@ -19,6 +20,7 @@ pub mod updater;
 pub mod upnp;
 
 pub use aria2::*;
+pub use bt_blocklist::*;
 pub use config::*;
 pub use ed2k::*;
 pub use engine::*;

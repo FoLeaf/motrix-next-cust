@@ -142,27 +142,6 @@ describe('useAppStore', () => {
       store.increaseInterval()
       expect(store.interval).toBe(STAT_MAX_INTERVAL)
     })
-
-    it('decreaseInterval decrements by 100ms by default', () => {
-      const store = useAppStore()
-      store.interval = 2000
-      store.decreaseInterval()
-      expect(store.interval).toBe(1900)
-    })
-
-    it('decreaseInterval does not go below STAT_MIN_INTERVAL', () => {
-      const store = useAppStore()
-      store.interval = STAT_MIN_INTERVAL
-      store.decreaseInterval()
-      expect(store.interval).toBe(STAT_MIN_INTERVAL)
-    })
-
-    it('resetInterval restores to STAT_BASE_INTERVAL', () => {
-      const store = useAppStore()
-      store.interval = 9999
-      store.resetInterval()
-      expect(store.interval).toBe(STAT_BASE_INTERVAL)
-    })
   })
 
   // ── Dialog State ────────────────────────────────────────────────
@@ -217,93 +196,6 @@ describe('useAppStore', () => {
       store.addTaskOptions = { dir: '/old' } as never
       store.updateAddTaskOptions()
       expect(store.addTaskOptions).toEqual({})
-    })
-  })
-
-  // ── fetchGlobalStat (one-shot initializer) ───────────────────────
-
-  describe('fetchGlobalStat', () => {
-    it('parses numeric stat values from string response', async () => {
-      const store = useAppStore()
-      const api = {
-        getGlobalStat: vi.fn().mockResolvedValue({
-          downloadSpeed: '102400',
-          uploadSpeed: '51200',
-          numActive: '2',
-          numWaiting: '1',
-          numStopped: '5',
-          numStoppedTotal: '5',
-        }),
-      }
-      await store.fetchGlobalStat(api)
-      expect(store.stat.downloadSpeed).toBe(102400)
-      expect(store.stat.uploadSpeed).toBe(51200)
-      expect(store.stat.numActive).toBe(2)
-    })
-
-    it('decreases interval when active tasks exist', async () => {
-      const store = useAppStore()
-      store.interval = STAT_BASE_INTERVAL
-      const api = {
-        getGlobalStat: vi.fn().mockResolvedValue({
-          downloadSpeed: '1000',
-          uploadSpeed: '0',
-          numActive: '3',
-          numWaiting: '0',
-          numStopped: '0',
-          numStoppedTotal: '0',
-        }),
-      }
-      await store.fetchGlobalStat(api)
-      expect(store.interval).toBeLessThanOrEqual(STAT_BASE_INTERVAL)
-    })
-
-    it('increases interval when no active tasks', async () => {
-      const store = useAppStore()
-      const before = store.interval
-      const api = {
-        getGlobalStat: vi.fn().mockResolvedValue({
-          downloadSpeed: '0',
-          uploadSpeed: '0',
-          numActive: '0',
-          numWaiting: '0',
-          numStopped: '3',
-          numStoppedTotal: '3',
-        }),
-      }
-      await store.fetchGlobalStat(api)
-      expect(store.interval).toBeGreaterThanOrEqual(before)
-      expect(store.stat.downloadSpeed).toBe(0)
-    })
-
-    it('survives API error without crashing', async () => {
-      const store = useAppStore()
-      const api = {
-        getGlobalStat: vi.fn().mockRejectedValue(new Error('network')),
-      }
-      await expect(store.fetchGlobalStat(api)).resolves.toBeUndefined()
-    })
-
-    it('does NOT invoke tray/dock/progress commands (Rust handles those)', async () => {
-      const { invoke } = await import('@tauri-apps/api/core')
-      const store = useAppStore()
-      const api = {
-        getGlobalStat: vi.fn().mockResolvedValue({
-          downloadSpeed: '1048576',
-          uploadSpeed: '0',
-          numActive: '1',
-          numWaiting: '0',
-          numStopped: '0',
-          numStoppedTotal: '0',
-        }),
-      }
-      await store.fetchGlobalStat(api)
-      // After the architectural migration, fetchGlobalStat is a pure data
-      // initializer — it must not invoke any tray/dock/progress commands.
-      const uiCalls = (invoke as ReturnType<typeof vi.fn>).mock.calls.filter((c: unknown[]) =>
-        ['update_tray_title', 'update_dock_badge', 'update_progress_bar'].includes(c[0] as string),
-      )
-      expect(uiCalls).toHaveLength(0)
     })
   })
 

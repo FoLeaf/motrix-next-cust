@@ -8,6 +8,11 @@ export default mergeConfig(
   await viteConfig(),
   defineConfig({
     test: {
+      server: {
+        deps: {
+          inline: ['@material/material-color-utilities'],
+        },
+      },
       environment: 'happy-dom',
       testTimeout: 10000,
       execArgv: ['--localstorage-file=' + join(tmpdir(), `motrix-next-vitest-localstorage-${process.pid}`)],

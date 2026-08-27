@@ -52,6 +52,12 @@ pub async fn restart_engine_command(app: AppHandle) -> Result<(), AppError> {
     .map_err(|e| AppError::Engine(e.to_string()))?
 }
 
+/// Validates a requested BitTorrent listen port and returns an available port.
+#[tauri::command]
+pub fn resolve_bt_listen_port(app: AppHandle, requested_port: u16) -> Result<u16, AppError> {
+    crate::services::port_guard::resolve_bt_listen_port(&app, requested_port)
+}
+
 /// Rust-side health check: probes the Aria2 Next RPC endpoint with retries.
 ///
 /// On successful probe, runs `on_engine_ready()` which:

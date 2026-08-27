@@ -4,7 +4,7 @@ import type { ProxyConfig } from '@shared/types'
 import { invoke } from '@tauri-apps/api/core'
 import { MAX_BT_TRACKER_LENGTH, PROXY_SCOPES } from '@shared/constants'
 import { logger } from '@shared/logger'
-import { resolveAppProxyUrl } from '@shared/utils/appProxyPolicy'
+import { resolveAppProxyUrl } from '@shared/utils/proxy'
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -73,7 +73,8 @@ export const convertTrackerDataToLine = (arr: string[] = []): string => {
   const lines = arr
     .join('\r\n')
     .split(/\r?\n/)
-    .filter((line) => line.trim() !== '')
+    .map((line) => line.trim())
+    .filter(Boolean)
   return [...new Set(lines)].join('\r\n')
 }
 

@@ -8,7 +8,6 @@ import { useAppStore } from '@/stores/app'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { listen } from '@tauri-apps/api/event'
 import { logger } from '@shared/logger'
-import { createTaskLifecycleService } from '@/composables/useTaskLifecycleService'
 import {
   buildHistoryRecord,
   buildSharingCompletionRecord,
@@ -19,22 +18,17 @@ import { setArchivedPath, resolveTaskFilePath, requestFileRecheck } from '@/comp
 import { handleTaskComplete, handleSharingComplete, handleTaskError } from '@/composables/useTaskNotifyHandlers'
 import { shouldDeleteTorrent, trashTorrentFile } from '@/composables/useDownloadCleanup'
 import { cleanupAria2ControlFiles } from '@/composables/useFileDelete'
-import { getTaskDisplayName, resolveOpenTarget, checkTaskIsSharing } from '@shared/utils'
+import { getTaskDisplayName, resolveOpenTarget, checkTaskIsSharing, getTaskSharingKind } from '@shared/utils'
 import type { TaskSharingKind } from '@shared/utils/task'
 import type { Aria2Task } from '@shared/types'
 import { ARIA2_ERROR_CODES } from '@shared/aria2ErrorCodes'
 import { TASK_STATUS } from '@shared/constants'
 import { useHistoryStore } from '@/stores/history'
+import { buildSelectFileOption, getPendingMagnetSelectionGids } from '@/composables/useMagnetFlow'
+import type { MagnetFileItem, MagnetSelectionSubmission } from '@/composables/useMagnetFlow'
 import {
-  buildSelectFileOption,
-  buildStatusAwareConfirmAction,
-  getPendingMagnetSelectionGids,
-} from '@/composables/useMagnetFlow'
-import type { MagnetFileItem } from '@/composables/useMagnetFlow'
-import {
+  createMagnetMetadataResolver,
   listenForAria2DownloadComplete,
-  resolveNextPendingMagnetMetadata,
-  resolvePendingMagnetMetadata,
   type MagnetMetadataState,
 } from '@/composables/useMagnetMetadataEvents'
 import aria2Api from '@/api/aria2'
@@ -131,7 +125,7 @@ let unlistenTrayMenu: (() => void) | null = null
 let unlistenResize: (() => void) | null = null
 let unlistenExitDialog: (() => void) | null = null
 let unlistenStat: (() => void) | null = null
-let lifecycleService: ReturnType<typeof createTaskLifecycleService> | null = null
+let unlistenTaskMonitor: Array<() => void> = []
 let unlistenAria2DownloadComplete: (() => void) | null = null
 let stopPendingMagnetWatch: (() => void) | null = null
 let unlistenFocusRecheck: (() => void) | null = null
@@ -213,6 +207,8 @@ const magnetSelectVisible = ref(false)
 const magnetSelectFiles = ref<MagnetFileItem[]>([])
 const magnetSelectionSession = ref<MagnetSelectionSession | null>(null)
 const magnetSelectName = ref('')
+const magnetSelectSubmission = ref<MagnetSelectionSubmission>(null)
+const magnetSelectClosing = ref(false)
 
 const { setupListeners } = useAppEvents({
   t,
@@ -305,17 +301,11 @@ function stopStatListener() {
 
 // ── Magnet metadata monitoring (app-level) ──────────────────────────
 
-async function resolvePendingMagnet(gid: string): Promise<boolean> {
-  return resolvePendingMagnetMetadata(magnetMetadataDeps(), gid)
-}
-
-async function resolveNextPendingMagnet() {
-  await resolveNextPendingMagnetMetadata(magnetMetadataDeps())
-}
+const magnetMetadataResolver = createMagnetMetadataResolver(magnetMetadataDeps)
 
 async function startAria2DownloadCompleteListener() {
   stopAria2DownloadCompleteListener()
-  unlistenAria2DownloadComplete = await listenForAria2DownloadComplete(resolvePendingMagnet)
+  unlistenAria2DownloadComplete = await listenForAria2DownloadComplete((gid) => magnetMetadataResolver.request(gid))
 }
 
 function stopAria2DownloadCompleteListener() {
@@ -359,6 +349,7 @@ function magnetMetadataDeps() {
   return {
     state,
     fetchTaskStatus: taskStore.fetchTaskStatus,
+    fetchPendingTasks: () => aria2Api.fetchTaskList({ type: 'active' }),
     getFiles: taskStore.getFiles,
     fallbackName: () => t('task.magnet-task'),
   }
@@ -378,59 +369,56 @@ async function restorePendingMagnetSelections() {
 }
 
 async function handleMagnetConfirm(selectedIndices: number[]) {
-  magnetSelectVisible.value = false
-  const gid = magnetSelectionSession.value?.downloadGid
-  if (!gid) return
+  if (magnetSelectSubmission.value !== null) return
+  const session = magnetSelectionSession.value
+  if (!session) return
 
+  magnetSelectSubmission.value = 'confirm'
   try {
     const selectFile = buildSelectFileOption(selectedIndices)
-    const task = await taskStore.fetchTaskStatus(gid)
-    const action = buildStatusAwareConfirmAction(task.status)
-    if (task.status === TASK_STATUS.ACTIVE) {
-      throw new Error('Magnet content task started before file selection')
-    }
-
-    await taskStore.changeTaskOption({ gid, options: { 'select-file': selectFile } })
-
-    if (action.needsResume) {
-      await taskStore.resumeTask(task)
-    }
+    const task = await taskStore.fetchTaskStatus(session.downloadGid)
+    await taskStore.applyMagnetFileSelection(task, selectFile)
+    appStore.pendingMagnetGids = appStore.pendingMagnetGids.filter((gid) => gid !== session.metadataGid)
+    magnetSelectClosing.value = true
+    magnetSelectVisible.value = false
+    magnetSelectionSession.value = null
+    magnetSelectFiles.value = []
+    magnetSelectName.value = ''
     message.success(t('task.magnet-files-selected') || 'Files selected, download starting')
   } catch (e) {
     logger.error('MainLayout.magnetConfirm', e)
     message.error(t('task.magnet-select-fail') || 'Failed to configure download')
   } finally {
-    magnetSelectionSession.value = null
-    magnetSelectFiles.value = []
-    magnetSelectName.value = ''
-  }
-
-  // Delay to let the modal close animation finish before showing the next dialog.
-  if (appStore.pendingMagnetGids.length > 0) {
-    setTimeout(() => void resolveNextPendingMagnet(), 350)
+    magnetSelectSubmission.value = null
   }
 }
 
 async function handleMagnetCancel() {
-  magnetSelectVisible.value = false
+  if (magnetSelectSubmission.value !== null) return
   const session = magnetSelectionSession.value
-  magnetSelectionSession.value = null
-  magnetSelectFiles.value = []
-  magnetSelectName.value = ''
   if (!session) return
 
+  magnetSelectSubmission.value = 'cancel'
   try {
     await taskStore.cancelMagnetSelectionDownload(session)
+    appStore.pendingMagnetGids = appStore.pendingMagnetGids.filter((gid) => gid !== session.metadataGid)
+    magnetSelectClosing.value = true
+    magnetSelectVisible.value = false
+    magnetSelectionSession.value = null
+    magnetSelectFiles.value = []
+    magnetSelectName.value = ''
+    message.info(t('task.magnet-download-cancelled') || 'Download cancelled')
   } catch (e) {
-    // Task may already be removed — log at debug level for diagnostics
-    logger.debug('MainLayout.magnetCancel', e)
+    logger.error('MainLayout.magnetCancel', e)
+  } finally {
+    magnetSelectSubmission.value = null
   }
-  message.info(t('task.magnet-download-cancelled') || 'Download cancelled')
+}
 
-  // Delay to let the modal close animation finish before showing the next dialog.
-  if (appStore.pendingMagnetGids.length > 0) {
-    setTimeout(() => void resolveNextPendingMagnet(), 350)
-  }
+function handleMagnetSelectAfterLeave() {
+  if (!magnetSelectClosing.value) return
+  magnetSelectClosing.value = false
+  if (appStore.pendingMagnetGids.length > 0) void magnetMetadataResolver.request()
 }
 
 /**
@@ -678,10 +666,14 @@ onMounted(async () => {
     startShutdownCountdown()
   })
 
-  // ── App-level task lifecycle service ─────────────────────────────
-  // Polls aria2 for active + stopped tasks independently of route/tab
-  // state, ensuring completion/error/BT-seeding detection works even
-  // when the user is on Settings or About pages.
+  // ── Task lifecycle reactions (driven by Rust monitor events) ─────
+  // The Rust task monitor is the single poller of aria2. It detects
+  // completion / error / shared-upload transitions, writes history, and
+  // sends native OS notifications (working even in lightweight mode after
+  // the WebView is destroyed). The frontend subscribes to those events and
+  // owns the UI-side reactions: in-app toasts, auto-archive file moves,
+  // torrent cleanup, and the auto-shutdown check. Each handler re-fetches
+  // the full aria2 task so it sees the same shape a poll would have.
   const historyStore = useHistoryStore()
 
   // ── Pre-populate task birth timestamps from DB ──────────────────
@@ -697,118 +689,146 @@ onMounted(async () => {
     logger.debug('TaskOrder.loadBirthRecords', e)
   }
 
-  lifecycleService = createTaskLifecycleService(aria2Api, {
-    onTaskError: (task) => {
-      if (isMetadataTask(task)) return
-      const record = buildHistoryRecord(task)
-      historyStore.addRecord(record).catch((e) => logger.debug('Lifecycle.historyRecord.error', e))
-      const i18nKey = task.errorCode ? ARIA2_ERROR_CODES[task.errorCode] : undefined
-      const errorText = i18nKey ? t(i18nKey) : task.errorMessage || t('task.error-unknown')
-      handleTaskError(task, errorText, {
-        messageSuccess: message.success,
-        messageError: message.error,
-        t,
-      })
-    },
-    onTaskComplete: async (task) => {
-      if (isMetadataTask(task)) return
-      const record = buildHistoryRecord(task)
-      // BT tasks: clean up stale DB records from previous sessions where
-      // aria2 assigned a different GID to the same torrent (infoHash is stable).
-      if (task.infoHash) {
-        historyStore.removeByInfoHash(task.infoHash, task.gid).catch((e) => logger.debug('Lifecycle.cleanStale', e))
+  async function fetchTaskForEvent(gid: string): Promise<Aria2Task | null> {
+    try {
+      return await aria2Api.fetchTaskItem({ gid })
+    } catch (e) {
+      logger.debug('Lifecycle.fetchTask', e instanceof Error ? e.message : String(e))
+      return null
+    }
+  }
+
+  async function onTaskError(task: Aria2Task): Promise<void> {
+    if (isMetadataTask(task)) return
+    const record = buildHistoryRecord(task)
+    historyStore.addRecord(record).catch((e) => logger.debug('Lifecycle.historyRecord.error', e))
+    const i18nKey = task.errorCode ? ARIA2_ERROR_CODES[task.errorCode] : undefined
+    const errorText = i18nKey ? t(i18nKey) : task.errorMessage || t('task.error-unknown')
+    handleTaskError(task, errorText, {
+      messageSuccess: message.success,
+      messageError: message.error,
+      t,
+    })
+  }
+
+  async function onTaskComplete(task: Aria2Task): Promise<void> {
+    if (isMetadataTask(task)) return
+    const record = buildHistoryRecord(task)
+    // BT tasks: clean up stale DB records from previous sessions where
+    // aria2 assigned a different GID to the same torrent (infoHash is stable).
+    if (task.infoHash) {
+      historyStore.removeByInfoHash(task.infoHash, task.gid).catch((e) => logger.debug('Lifecycle.cleanStale', e))
+    }
+    historyStore.addRecord(record).catch((e) => logger.debug('Lifecycle.historyRecord', e))
+    handleTaskComplete(task, {
+      messageSuccess: message.success,
+      messageError: message.error,
+      t,
+      onOpenFile: openFileFromNotification,
+      onShowInFolder: showInFolderFromNotification,
+    })
+
+    // ── Auto-archive: move file to category directory if applicable ──
+    logger.debug(
+      'AutoArchive.input',
+      `gid=${task.gid} enabled=${preferenceStore.config.fileCategoryEnabled} ` +
+        `categories=${preferenceStore.config.fileCategories?.length ?? 0} ` +
+        `baseDir=${preferenceStore.config.dir}`,
+    )
+    const archiveAction = resolveArchiveAction(
+      task,
+      preferenceStore.config.fileCategoryEnabled,
+      preferenceStore.config.fileCategories,
+      preferenceStore.config.dir,
+    )
+    if (archiveAction) {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core')
+        const newPath = await invoke<string>('move_file', {
+          source: archiveAction.source,
+          targetDir: archiveAction.targetDir,
+        })
+        logger.info('AutoArchive.moved', `${archiveAction.source} → ${newPath}`)
+
+        // Persist the new path so all consumers resolve to the archived location.
+        // Runtime Map — effective immediately for this session.
+        setArchivedPath(task.gid, newPath)
+        // History DB — effective after app restart (meta.files path update).
+        updateHistoryFilePath(historyStore, task.gid, archiveAction.source, newPath).catch((e) =>
+          logger.debug('AutoArchive.historyUpdate', e),
+        )
+      } catch (e) {
+        // Archive failure is non-critical — file remains at download location
+        logger.warn('AutoArchive.failed', e instanceof Error ? e.message : String(e))
       }
-      historyStore.addRecord(record).catch((e) => logger.debug('Lifecycle.historyRecord', e))
-      handleTaskComplete(task, {
-        messageSuccess: message.success,
-        messageError: message.error,
-        t,
-        onOpenFile: openFileFromNotification,
-        onShowInFolder: showInFolderFromNotification,
-      })
+    } else {
+      logger.debug('AutoArchive.result', `gid=${task.gid} action=none`)
+    }
 
-      // ── Auto-archive: move file to category directory if applicable ──
-      logger.debug(
-        'AutoArchive.input',
-        `gid=${task.gid} enabled=${preferenceStore.config.fileCategoryEnabled} ` +
-          `categories=${preferenceStore.config.fileCategories?.length ?? 0} ` +
-          `baseDir=${preferenceStore.config.dir}`,
-      )
-      const archiveAction = resolveArchiveAction(
-        task,
-        preferenceStore.config.fileCategoryEnabled,
-        preferenceStore.config.fileCategories,
-        preferenceStore.config.dir,
-      )
-      if (archiveAction) {
-        try {
-          const { invoke } = await import('@tauri-apps/api/core')
-          const newPath = await invoke<string>('move_file', {
-            source: archiveAction.source,
-            targetDir: archiveAction.targetDir,
-          })
-          logger.info('AutoArchive.moved', `${archiveAction.source} → ${newPath}`)
+    // Clean up stale .aria2 control files when P2P sharing auto-stops.
+    if (task.bittorrent || task.ed2k) {
+      cleanupAria2ControlFiles(task).catch((e) => logger.debug('Lifecycle.aria2ControlCleanup', e))
+    }
 
-          // Persist the new path so all consumers resolve to the archived location.
-          // Runtime Map — effective immediately for this session.
-          setArchivedPath(task.gid, newPath)
-          // History DB — effective after app restart (meta.files path update).
-          updateHistoryFilePath(historyStore, task.gid, archiveAction.source, newPath).catch((e) =>
-            logger.debug('AutoArchive.historyUpdate', e),
-          )
-        } catch (e) {
-          // Archive failure is non-critical — file remains at download location
-          logger.warn('AutoArchive.failed', e instanceof Error ? e.message : String(e))
-        }
-      } else {
-        logger.debug('AutoArchive.result', `gid=${task.gid} action=none`)
+    // ── Auto-shutdown: check after task completion ──
+    checkShutdownCondition()
+  }
+
+  async function onSharingComplete(task: Aria2Task, kind: TaskSharingKind): Promise<void> {
+    // Persist immediately — download is complete, sharing is just uploading.
+    // INSERT OR REPLACE: safe if onTaskComplete later writes the same GID.
+    if (!isMetadataTask(task)) {
+      if (kind === 'bt' && task.infoHash) {
+        historyStore
+          .removeByInfoHash(task.infoHash, task.gid)
+          .catch((e) => logger.debug('Lifecycle.sharingComplete.cleanStale', e))
       }
+      const record = buildSharingCompletionRecord(task)
+      historyStore.addRecord(record).catch((e) => logger.debug('Lifecycle.sharingComplete.history', e))
+    }
+    handleSharingComplete(task, kind, {
+      messageSuccess: message.success,
+      messageError: message.error,
+      t,
+      onOpenFile: openFileFromNotification,
+      onShowInFolder: showInFolderFromNotification,
+    })
 
-      // Clean up stale .aria2 control files when P2P sharing auto-stops.
-      if (task.bittorrent || task.ed2k) {
-        cleanupAria2ControlFiles(task).catch((e) => logger.debug('Lifecycle.aria2ControlCleanup', e))
+    // ── Auto-shutdown: check after P2P download completion ──
+    // Must be BEFORE shouldDeleteTorrent early return to avoid being skipped.
+    checkShutdownCondition()
+
+    if (kind !== 'bt') return
+    if (!shouldDeleteTorrent(preferenceStore.config)) return
+    const sourcePath = task.infoHash ? taskStore.consumeTorrentSource(task.infoHash) : undefined
+    if (sourcePath) {
+      const ok = await trashTorrentFile(sourcePath)
+      if (ok) {
+        const taskName = getTaskDisplayName(task)
+        message.success(t('task.torrent-trashed', { taskName }))
       }
+    }
+  }
 
-      // ── Auto-shutdown: check after task completion ──
-      checkShutdownCondition()
-    },
-    onSharingComplete: async (task, kind: TaskSharingKind) => {
-      // Persist immediately — download is complete, sharing is just uploading.
-      // INSERT OR REPLACE: safe if onTaskComplete later writes the same GID.
-      if (!isMetadataTask(task)) {
-        if (kind === 'bt' && task.infoHash) {
-          historyStore
-            .removeByInfoHash(task.infoHash, task.gid)
-            .catch((e) => logger.debug('Lifecycle.sharingComplete.cleanStale', e))
-        }
-        const record = buildSharingCompletionRecord(task)
-        historyStore.addRecord(record).catch((e) => logger.debug('Lifecycle.sharingComplete.history', e))
-      }
-      handleSharingComplete(task, kind, {
-        messageSuccess: message.success,
-        messageError: message.error,
-        t,
-        onOpenFile: openFileFromNotification,
-        onShowInFolder: showInFolderFromNotification,
-      })
-
-      // ── Auto-shutdown: check after P2P download completion ──
-      // Must be BEFORE shouldDeleteTorrent early return to avoid being skipped.
-      checkShutdownCondition()
-
-      if (kind !== 'bt') return
-      if (!shouldDeleteTorrent(preferenceStore.config)) return
-      const sourcePath = task.infoHash ? taskStore.consumeTorrentSource(task.infoHash) : undefined
-      if (sourcePath) {
-        const ok = await trashTorrentFile(sourcePath)
-        if (ok) {
-          const taskName = getTaskDisplayName(task)
-          message.success(t('task.torrent-trashed', { taskName }))
-        }
-      }
-    },
-  })
-  lifecycleService.start(() => appStore.interval)
+  unlistenTaskMonitor = [
+    await listen<{ gid: string }>('task-monitor:error', async ({ payload }) => {
+      const task = await fetchTaskForEvent(payload.gid)
+      if (task) await onTaskError(task)
+    }),
+    await listen<{ gid: string }>('task-monitor:complete', async ({ payload }) => {
+      const task = await fetchTaskForEvent(payload.gid)
+      if (task) await onTaskComplete(task)
+    }),
+    await listen<{ gid: string; sharingKind?: TaskSharingKind }>(
+      'task-monitor:sharing-complete',
+      async ({ payload }) => {
+        const task = await fetchTaskForEvent(payload.gid)
+        if (!task) return
+        const kind = payload.sharingKind ?? getTaskSharingKind(task)
+        if (kind) await onSharingComplete(task, kind)
+      },
+    ),
+  ]
 
   // ── Window-focus file-existence recheck ─────────────────────────────
   // When the user switches back from Finder / Explorer after deleting a
@@ -825,7 +845,7 @@ onMounted(async () => {
   stopPendingMagnetWatch = watch(
     () => appStore.pendingMagnetGids,
     (gids) => {
-      if (gids.length > 0) void resolveNextPendingMagnet()
+      if (gids.length > 0 && !magnetSelectClosing.value) void magnetMetadataResolver.request()
     },
     { immediate: true },
   )
@@ -937,7 +957,8 @@ onUnmounted(() => {
   stopAria2DownloadCompleteListener()
   stopPendingMagnetWatch?.()
   stopPendingMagnetWatch = null
-  lifecycleService?.stop()
+  unlistenTaskMonitor.forEach((fn) => fn())
+  unlistenTaskMonitor = []
   if (unlistenFocusRecheck) unlistenFocusRecheck()
   if (unlistenDragDrop) unlistenDragDrop()
   if (unlistenMenuEvent) unlistenMenuEvent()
@@ -1010,15 +1031,17 @@ onUnmounted(() => {
       :show="magnetSelectVisible"
       :files="magnetSelectFiles"
       :task-name="magnetSelectName"
+      :submission="magnetSelectSubmission"
       @confirm="handleMagnetConfirm"
       @cancel="handleMagnetCancel"
+      @after-leave="handleMagnetSelectAfterLeave"
     />
 
     <!-- Close action dialog: minimize-to-tray / quit / cancel -->
     <NModal
       :show="showExitDialog"
       preset="dialog"
-      type="warning"
+      type="default"
       :title="t('app.close-action-title')"
       :closable="true"
       :mask-closable="true"
@@ -1160,7 +1183,7 @@ onUnmounted(() => {
   left: 0;
   height: 2px;
   width: 30%;
-  background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
+  background: linear-gradient(90deg, transparent, var(--m3-primary), transparent);
   animation: engine-indeterminate 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   will-change: transform;
   contain: layout style paint;

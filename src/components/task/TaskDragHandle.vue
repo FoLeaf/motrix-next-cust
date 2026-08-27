@@ -35,11 +35,11 @@
     border-color 0.16s cubic-bezier(0.2, 0, 0, 1);
 }
 .task-drag-handle:hover {
-  color: color-mix(in srgb, var(--color-primary) 75%, var(--m3-outline));
+  color: color-mix(in srgb, var(--m3-primary) 75%, var(--m3-outline));
   opacity: 0.96;
-  border-right-color: color-mix(in srgb, var(--color-primary) 46%, transparent);
-  background-color: color-mix(in srgb, var(--color-primary) 12%, var(--task-item-bg));
-  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--color-primary) 18%, transparent);
+  border-right-color: color-mix(in srgb, var(--m3-primary) 46%, transparent);
+  background-color: color-mix(in srgb, var(--m3-primary) 12%, var(--task-item-bg));
+  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--m3-primary) 18%, transparent);
 }
 .task-drag-handle:active {
   cursor: grabbing;

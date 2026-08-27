@@ -75,6 +75,10 @@
   max-width: 100%;
 }
 
+.pref-action-button--compact {
+  min-width: fit-content;
+}
+
 .pref-icon-button {
   padding: 0 10px;
 }
@@ -85,6 +89,14 @@
 
 .pref-input-group-action {
   flex-shrink: 0;
+}
+
+.pref-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
 }
 
 .pref-inline-row {
@@ -99,7 +111,7 @@
   color: var(--m3-on-surface-variant);
   font-size: 13px;
   line-height: 1.4;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .pref-inline-note {
@@ -115,43 +127,4 @@
 
 .pref-meta-link {
   margin-left: 8px;
-}
-
-.ghost-btn--danger,
-.ghost-btn--warning,
-.ghost-btn--primary {
-  color: var(--btn-tint) !important;
-  border-color: var(--btn-tint) !important;
-  transition:
-    color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    background-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-
-.ghost-btn--danger {
-  --btn-tint: var(--m3-error, #c97070);
-}
-
-.ghost-btn--warning {
-  --btn-tint: var(--m3-tertiary, #c9a055);
-}
-
-.ghost-btn--primary {
-  --btn-tint: var(--color-primary, #5b93d5);
-}
-
-.ghost-btn--danger:hover,
-.ghost-btn--warning:hover,
-.ghost-btn--primary:hover {
-  background-color: color-mix(in srgb, var(--btn-tint) 12%, transparent) !important;
-}
-
-.ghost-btn--danger .n-button__border,
-.ghost-btn--danger .n-button__state-border,
-.ghost-btn--warning .n-button__border,
-.ghost-btn--warning .n-button__state-border,
-.ghost-btn--primary .n-button__border,
-.ghost-btn--primary .n-button__state-border {
-  border-color: var(--btn-tint) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
 }

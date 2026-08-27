@@ -239,7 +239,7 @@ watch(
 <style scoped>
 .engine-dialog {
   width: 420px;
-  background: var(--n-color, var(--m3-surface-container-high));
+  background: var(--m3-surface-container-high);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 12px 40px var(--m3-shadow);
@@ -254,12 +254,12 @@ watch(
 .engine-dialog-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--n-text-color, var(--m3-on-surface));
+  color: var(--m3-on-surface);
 }
 .engine-dialog-close {
   background: none;
   border: none;
-  color: var(--n-text-color, var(--m3-outline));
+  color: var(--m3-outline);
   font-size: 20px;
   cursor: pointer;
   padding: 0 4px;
@@ -325,7 +325,7 @@ watch(
 .engine-attempt-counter {
   font-size: 14px;
   font-weight: 500;
-  color: var(--n-text-color-3, var(--m3-on-surface-variant));
+  color: var(--m3-on-surface-variant);
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -334,7 +334,7 @@ watch(
   display: inline-block;
   font-weight: 700;
   font-size: 16px;
-  color: var(--n-text-color-2, var(--m3-on-surface));
+  color: var(--m3-on-surface);
   min-width: 1em;
   text-align: center;
 }

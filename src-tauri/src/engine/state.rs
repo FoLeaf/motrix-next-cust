@@ -87,7 +87,7 @@ mod tests {
     }
 
     #[test]
-    fn strip_ansi_handles_notice_tag() {
+    fn strip_ansi_handles_colored_level_tag() {
         let input =
             "2026-05-29 00:56:16.123 [\x1b[32minfo\x1b[0m] [RpcBeastServer.cc:241] IPv4 RPC: listening on TCP port 29100";
         let clean = strip_ansi(input);

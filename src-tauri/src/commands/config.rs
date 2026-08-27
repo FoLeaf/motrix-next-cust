@@ -70,6 +70,7 @@ pub fn factory_reset(app: AppHandle) -> Result<(), AppError> {
 
     // Remove aria2 session file so downloads don't reappear after restart
     clear_session_file_inner(&app)?;
+    crate::commands::bt_blocklist::remove_bt_peer_blocklist_cache(&app)?;
 
     Ok(())
 }

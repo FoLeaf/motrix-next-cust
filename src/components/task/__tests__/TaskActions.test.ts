@@ -18,7 +18,7 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const mockIsEngineReady = vi.fn().mockReturnValue(true)
 const mockFetchList = vi.fn().mockResolvedValue(undefined)
-const mockResumeAllTask = vi.fn().mockResolvedValue(undefined)
+const mockResumeAllTask = vi.fn().mockResolvedValue({ resumed: 1, blocked: 0 })
 const mockPauseAllTask = vi.fn().mockResolvedValue(undefined)
 const mockPurgeTaskRecord = vi.fn().mockResolvedValue(undefined)
 const mockBatchRemoveTask = vi.fn().mockResolvedValue(undefined)
@@ -76,10 +76,10 @@ function translateForTest(key: string, params?: Record<string, unknown>): string
     'task.delete-all-task': 'Clear Download Queue',
     'task.delete-task-queue': 'Clear Download Queue',
     'task.batch-delete-task-confirm': `This will remove ${params?.count ?? '{count}'} downloading, queued, or paused task(s).`,
-    'task.delete-queue-files-label': 'Also delete local files',
+    'task.delete-local-files-trash-label': 'Move files to Trash',
+    'task.delete-local-files-permanent-label': 'Permanently delete files',
     'task.purge-record': 'Clear History Records',
     'task.purge-record-confirm': 'This will remove all completed, failed, or removed task records.',
-    'task.purge-record-files-label': 'Also delete local files',
   }
   return messages[key] ?? key
 }
@@ -100,7 +100,11 @@ vi.mock('naive-ui', () => ({
     template: '<div><slot name="trigger" /></div>',
     props: ['show', 'trigger', 'placement', 'showArrow', 'raw'],
   },
-  useDialog: () => ({ warning: mockDialogWarning }),
+  useDialog: () => ({
+    error: mockDialogWarning,
+    info: mockDialogWarning,
+    warning: mockDialogWarning,
+  }),
   useMessage: () => ({
     success: mockMessageSuccess,
     error: mockMessageError,
@@ -147,6 +151,7 @@ vi.mock('@/composables/useFileDelete', () => ({
 }))
 
 import TaskActions from '../TaskActions.vue'
+import { usePreferenceStore } from '@/stores/preference'
 import { useTaskStore } from '@/stores/task'
 import { ref, type Ref } from 'vue'
 
@@ -505,7 +510,7 @@ describe('TaskActions', () => {
       expect(renderDialogText(lastDialogOptions?.content)).toContain(
         'This will remove all completed, failed, or removed task records.',
       )
-      expect(renderDialogText(lastDialogOptions?.content)).toContain('Also delete local files')
+      expect(renderDialogText(lastDialogOptions?.content)).toContain('Move files to Trash')
       const onPositiveClick = lastDialogOptions!.onPositiveClick as () => Promise<void>
       // onPositiveClick has internal setTimeout(50) — must advance timer
       const promise = onPositiveClick()
@@ -538,7 +543,19 @@ describe('TaskActions', () => {
       expect(renderDialogText(lastDialogOptions?.content)).toContain(
         'This will remove 2 downloading, queued, or paused task(s).',
       )
-      expect(renderDialogText(lastDialogOptions?.content)).toContain('Also delete local files')
+      expect(renderDialogText(lastDialogOptions?.content)).toContain('Move files to Trash')
+    })
+
+    it('shows the permanent deletion action when configured', async () => {
+      const preferenceStore = usePreferenceStore()
+      preferenceStore.config.fileDeletionMode = 'permanent'
+      const taskStore = useTaskStore()
+      taskStore.taskList = [{ gid: 'g1' }] as never
+
+      const wrapper = createWrapper()
+      await clickButton(wrapper, 6)
+
+      expect(renderDialogText(lastDialogOptions?.content)).toContain('Permanently delete files')
     })
 
     it('calls batchRemoveTask with all gids on confirmation', async () => {
@@ -781,6 +798,7 @@ describe('TaskActions', () => {
 
       expect(mockDeleteTaskFiles).toHaveBeenCalledTimes(2)
       expect(mockDeleteTaskFiles.mock.calls.map((call) => (call[0] as { gid: string }).gid)).toEqual(['c1', 'e1'])
+      expect(mockDeleteTaskFiles.mock.calls.every((call) => call[1] === 'trash')).toBe(true)
       expect(mockPurgeTaskRecord).toHaveBeenCalledOnce()
     })
 

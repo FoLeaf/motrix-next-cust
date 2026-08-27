@@ -387,7 +387,7 @@ describe('useAppEvents', () => {
       payload: [{ kind: 'bt', oldPort: 29120, newPort: 29800 }],
     })
 
-    expect(message.success).toHaveBeenCalledWith('preferences.port-auto-switched')
+    expect(message.info).toHaveBeenCalledWith('preferences.port-auto-switched')
     expect(deps.preferenceStore.updatePreference).toHaveBeenCalledWith({
       listenPort: 29800,
     })

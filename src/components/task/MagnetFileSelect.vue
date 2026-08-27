@@ -10,17 +10,19 @@ import { NModal, NCard, NDataTable, NButton, NSpace, NEllipsis } from 'naive-ui'
 import { bytesToSize } from '@shared/utils'
 import { calcColumnWidth } from '@shared/utils/calcColumnWidth'
 import type { DataTableColumns, DataTableRowKey } from 'naive-ui'
-import type { MagnetFileItem } from '@/composables/useMagnetFlow'
+import type { MagnetFileItem, MagnetSelectionSubmission } from '@/composables/useMagnetFlow'
 
 const props = defineProps<{
   show: boolean
   files: MagnetFileItem[]
   taskName: string
+  submission: MagnetSelectionSubmission
 }>()
 
 const emit = defineEmits<{
   confirm: [selectedIndices: number[]]
   cancel: []
+  afterLeave: []
 }>()
 
 const { t } = useI18n()
@@ -96,12 +98,17 @@ watch(totalSize, (cur, prev) => {
 })
 
 const hasSelection = computed(() => checkedKeys.value.length > 0)
+const submitting = computed(() => props.submission !== null)
+const confirming = computed(() => props.submission === 'confirm')
+const cancelling = computed(() => props.submission === 'cancel')
 
 function handleConfirm() {
+  if (submitting.value) return
   emit('confirm', checkedKeys.value as number[])
 }
 
 function handleCancel() {
+  if (submitting.value) return
   emit('cancel')
 }
 </script>
@@ -110,16 +117,17 @@ function handleCancel() {
   <NModal
     :show="show"
     :mask-closable="false"
-    :close-on-esc="true"
+    :close-on-esc="!submitting"
     :auto-focus="false"
     transform-origin="center"
     :transition="{ name: 'fade-scale' }"
     @update:show="(v) => !v && handleCancel()"
+    @after-leave="emit('afterLeave')"
   >
     <NCard
       :title="t('task.select-files') || 'Select Files'"
       :bordered="false"
-      closable
+      :closable="!submitting"
       role="dialog"
       class="magnet-file-select-card"
       :style="{
@@ -163,10 +171,15 @@ function handleCancel() {
             </Transition>
           </span>
           <NSpace>
-            <NButton @click="handleCancel">
+            <NButton :loading="cancelling" :disabled="submitting" @click="handleCancel">
               {{ t('task.magnet-cancel-download') || 'Cancel Download' }}
             </NButton>
-            <NButton type="primary" :disabled="!hasSelection" @click="handleConfirm">
+            <NButton
+              type="primary"
+              :loading="confirming"
+              :disabled="submitting || !hasSelection"
+              @click="handleConfirm"
+            >
               {{ t('task.magnet-start-download') || 'Start Download' }}
             </NButton>
           </NSpace>
@@ -182,7 +195,7 @@ function handleCancel() {
 .task-name-subtitle {
   margin-bottom: 12px;
   font-size: 13px;
-  color: var(--n-text-color-3, var(--m3-on-surface-variant));
+  color: var(--m3-on-surface-variant);
   line-height: 1.4;
 }
 
@@ -193,7 +206,7 @@ function handleCancel() {
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--n-text-color-2, var(--m3-on-surface));
+  color: var(--m3-on-surface);
 }
 
 .file-summary-count,

@@ -69,7 +69,7 @@ The API is intended for browser-extension integration. Users can change the port
 
 ## Website Privacy
 
-The project website is a static site. It may request GitHub API endpoints in the visitor's browser to display release, download, and repository statistics, and it loads the Star History chart from `api.star-history.com`. These website requests are separate from the desktop application.
+The project website is a static site. It may request GitHub API endpoints in the visitor's browser to display release, download, and repository statistics. These website requests are separate from the desktop application.
 
 ## Third-Party Components
 

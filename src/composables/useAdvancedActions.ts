@@ -19,7 +19,6 @@ import { calcColumnWidth } from '@shared/utils/calcColumnWidth'
 import { resolveUserVisibleDownloadDir } from '@shared/utils/userVisibleDirectory'
 import { buildSettingsBackup, parseSettingsBackup } from '@shared/utils/settingsBackup'
 import { buildSystemConfigFromAppConfig } from '@shared/utils/systemConfig'
-import { useIpc } from '@/composables/useIpc'
 import { useEngineRestart } from '@/composables/useEngineRestart'
 import { ENGINE_RPC_PORT } from '@shared/constants'
 import type { AppConfig, HistoryRecord } from '@shared/types'
@@ -166,7 +165,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
   function handleManualRestart(rpcListenPort: number, rpcSecret: string) {
     const port = rpcListenPort || ENGINE_RPC_PORT
     const secret = rpcSecret || ''
-    const d = dialog.warning({
+    const d = dialog.info({
       title: t('preferences.engine-restart-title'),
       content: t('preferences.engine-restart-manual-confirm'),
       positiveText: t('preferences.engine-restart-now'),
@@ -184,7 +183,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
   }
 
   function handleSessionReset() {
-    dialog.warning({
+    dialog.error({
       title: t('preferences.clear-all-tasks'),
       content: t('preferences.clear-all-tasks-confirm'),
       positiveText: t('app.yes'),
@@ -211,7 +210,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
   }
 
   function handleRestoreDefaults() {
-    dialog.warning({
+    dialog.error({
       title: t('preferences.restore-defaults'),
       content: t('preferences.restore-defaults-confirm'),
       positiveText: t('preferences.restore-defaults'),
@@ -228,8 +227,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
             positiveText: t('preferences.restart-now'),
             negativeText: t('app.cancel'),
             onPositiveClick: async () => {
-              const { stopEngine } = useIpc()
-              await stopEngine()
+              await invoke('stop_engine_command')
               relaunch()
             },
           })
@@ -247,8 +245,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
       onPositiveClick: async () => {
         try {
           await invoke('factory_reset')
-          const { stopEngine } = useIpc()
-          await stopEngine()
+          await invoke('stop_engine_command')
           relaunch()
         } catch (e) {
           logger.error('Advanced.factoryReset', e)
@@ -421,8 +418,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
             negativeText: t('preferences.engine-restart-later'),
             maskClosable: false,
             onPositiveClick: async () => {
-              const { stopEngine } = useIpc()
-              await stopEngine()
+              await invoke('stop_engine_command')
               await relaunch()
             },
           })
@@ -437,7 +433,7 @@ export function useAdvancedActions(deps: AdvancedActionsDeps) {
   }
 
   function handleClearLog() {
-    dialog.warning({
+    dialog.error({
       title: t('preferences.clear-log'),
       content: t('preferences.clear-log-confirm'),
       positiveText: t('app.yes'),

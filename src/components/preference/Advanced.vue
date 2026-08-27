@@ -13,7 +13,6 @@ import { useHistoryStore } from '@/stores/history'
 import { useAdvancedActions } from '@/composables/useAdvancedActions'
 import { useProtocolHandlers, type ProtocolKey } from '@/composables/useProtocolHandlers'
 import { relaunch } from '@tauri-apps/plugin-process'
-import { useIpc } from '@/composables/useIpc'
 import { appDataDir, appLogDir, join, tempDir } from '@tauri-apps/api/path'
 import { APP_LOG_LEVELS, ARIA2_LOG_LEVELS } from '@shared/constants'
 import {
@@ -127,7 +126,7 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
     const prevSecret = preferenceStore.config.rpcSecret
     if (!f.rpcSecret && !!prevSecret) {
       const ok = await new Promise<boolean>((resolve) => {
-        dialog.warning({
+        dialog.info({
           title: t('preferences.rpc-secret-empty-title'),
           content: t('preferences.rpc-secret-empty-confirm'),
           positiveText: t('preferences.rpc-secret-empty-continue'),
@@ -147,7 +146,7 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
     const changed = diffConfig(preferenceStore.config, f)
     if (checkIsNeedRestart(changed)) {
       const ok = await new Promise<boolean>((resolve) => {
-        dialog.warning({
+        dialog.info({
           title: t('preferences.engine-restart-title'),
           content: t('preferences.engine-restart-confirm'),
           positiveText: t('preferences.engine-restart-now'),
@@ -205,8 +204,7 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
         negativeText: t('preferences.engine-restart-later'),
         maskClosable: false,
         onPositiveClick: async () => {
-          const { stopEngine } = useIpc()
-          await stopEngine()
+          await invoke('stop_engine_command')
           await relaunch()
         },
       })
@@ -221,8 +219,7 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
         negativeText: t('preferences.engine-restart-later'),
         maskClosable: false,
         onPositiveClick: async () => {
-          const { stopEngine } = useIpc()
-          await stopEngine()
+          await invoke('stop_engine_command')
           await relaunch()
         },
       })
@@ -541,7 +538,7 @@ watch(protocolHandlers.lastError, (error) => {
           </NInputGroup>
         </NFormItem>
         <NFormItem label=" ">
-          <NButton class="ghost-btn--warning" ghost @click="handleSessionReset">
+          <NButton type="error" ghost @click="handleSessionReset">
             {{ t('preferences.clear-all-tasks') }}
           </NButton>
         </NFormItem>
@@ -584,13 +581,13 @@ watch(protocolHandlers.lastError, (error) => {
         </NFormItem>
         <NFormItem label=" ">
           <div class="log-action-row">
-            <NButton class="ghost-btn--primary" ghost :loading="exportingLogs" @click="handleExportLogs">
+            <NButton type="primary" ghost :loading="exportingLogs" @click="handleExportLogs">
               <template #icon>
                 <NIcon><DownloadOutline /></NIcon>
               </template>
               {{ t('preferences.export-diagnostic-logs') }}
             </NButton>
-            <NButton class="ghost-btn--danger" ghost @click="handleClearLog">
+            <NButton type="error" ghost @click="handleClearLog">
               <template #icon>
                 <NIcon><TrashOutline /></NIcon>
               </template>
@@ -617,7 +614,7 @@ watch(protocolHandlers.lastError, (error) => {
             <NButton class="db-browse-btn" @click="handleDbBrowse">
               {{ t('preferences.db-browse') }}
             </NButton>
-            <NButton class="ghost-btn--danger" ghost @click="handleDbReset">
+            <NButton type="error" ghost @click="handleDbReset">
               {{ t('preferences.db-reset') }}
             </NButton>
           </NSpace>
@@ -631,10 +628,10 @@ watch(protocolHandlers.lastError, (error) => {
               </template>
               {{ t('preferences.open-config-folder') }}
             </NButton>
-            <NButton class="ghost-btn--warning" ghost @click="handleRestoreDefaults">
+            <NButton type="error" ghost @click="handleRestoreDefaults">
               {{ t('preferences.restore-defaults') }}
             </NButton>
-            <NButton class="ghost-btn--danger" ghost @click="handleFactoryReset">
+            <NButton type="error" ghost @click="handleFactoryReset">
               {{ t('preferences.factory-reset') }}
             </NButton>
           </NSpace>
@@ -642,13 +639,13 @@ watch(protocolHandlers.lastError, (error) => {
         <NFormItem :label="t('preferences.settings-backup')">
           <div class="settings-backup-row">
             <NSpace>
-              <NButton class="ghost-btn--primary" ghost :loading="exportingSettings" @click="handleExportSettings">
+              <NButton type="primary" ghost :loading="exportingSettings" @click="handleExportSettings">
                 <template #icon>
                   <NIcon><CloudDownloadOutline /></NIcon>
                 </template>
                 {{ t('preferences.export-settings') }}
               </NButton>
-              <NButton class="ghost-btn--warning" ghost :loading="importingSettings" @click="handleImportSettings">
+              <NButton type="warning" ghost :loading="importingSettings" @click="handleImportSettings">
                 <template #icon>
                   <NIcon><CloudUploadOutline /></NIcon>
                 </template>
@@ -741,7 +738,7 @@ watch(protocolHandlers.lastError, (error) => {
 
 <style scoped>
 .info-link {
-  color: var(--color-primary);
+  color: var(--m3-primary);
   text-decoration: none;
   font-size: 12px;
 }
@@ -749,7 +746,7 @@ watch(protocolHandlers.lastError, (error) => {
   text-decoration: underline;
 }
 .action-link {
-  color: var(--color-primary);
+  color: var(--m3-primary);
   cursor: pointer;
   margin-left: 8px;
   font-size: 12px;
@@ -837,7 +834,7 @@ watch(protocolHandlers.lastError, (error) => {
   padding: 8px 12px;
   margin-top: 6px;
   border-radius: var(--border-radius);
-  background: var(--m3-error-container-bg);
+  background: var(--m3-error-container);
   opacity: 0;
   transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -846,31 +843,8 @@ watch(protocolHandlers.lastError, (error) => {
 }
 .ua-warn-text {
   font-size: var(--font-size-sm);
-  color: var(--m3-error);
+  color: var(--m3-on-error-container);
   flex: 1;
-}
-
-/* ── UA Reset — muted-rose ghost that highlights on hover ─────────── */
-.ua-reset-btn {
-  --btn-muted: #c97070;
-  color: var(--btn-muted) !important;
-  transition:
-    color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    background-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.ua-reset-btn:hover {
-  background-color: color-mix(in srgb, var(--btn-muted) 12%, transparent) !important;
-}
-.ua-reset-btn :deep(.n-button__border) {
-  border-color: var(--btn-muted) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.ua-reset-btn:hover :deep(.n-button__border) {
-  border-color: var(--btn-muted) !important;
-}
-.ua-reset-btn :deep(.n-button__state-border) {
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 
 /* ── Proxy collapse — CSS Grid 0fr→1fr for glitch-free height:auto ── */

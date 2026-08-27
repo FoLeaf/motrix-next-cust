@@ -101,7 +101,20 @@ pub async fn aria2_change_global_option(
     state: State<'_, Aria2State>,
     options: serde_json::Map<String, serde_json::Value>,
 ) -> Result<String, AppError> {
-    state.0.change_global_option(options).await
+    let endpoint_changed = options.contains_key("listen-port")
+        || options.contains_key("bt-external-ip")
+        || options.contains_key("bt-external-port");
+    let result = state.0.change_global_option(options).await?;
+    if endpoint_changed {
+        let endpoint = state.0.get_bt_endpoint().await?;
+        log::info!(
+            "aria2:bt-endpoint listen_port={} announce_port={} external_ip_configured={}",
+            endpoint.listen_port,
+            endpoint.announce_port,
+            !endpoint.external_ip.is_empty()
+        );
+    }
+    Ok(result)
 }
 
 /// Get per-task options.
@@ -438,24 +451,6 @@ pub async fn aria2_pause(state: State<'_, Aria2State>, gid: String) -> Result<St
 pub async fn aria2_unpause(state: State<'_, Aria2State>, gid: String) -> Result<String, AppError> {
     log::debug!("aria2:resume gid={gid}");
     state.0.unpause(&gid).await
-}
-
-/// Pause all active downloads (graceful).
-#[tauri::command]
-pub async fn aria2_pause_all(state: State<'_, Aria2State>) -> Result<String, AppError> {
-    state.0.pause_all().await
-}
-
-/// Forcefully pause all active downloads.
-#[tauri::command]
-pub async fn aria2_force_pause_all(state: State<'_, Aria2State>) -> Result<String, AppError> {
-    state.0.force_pause_all().await
-}
-
-/// Resume all paused downloads.
-#[tauri::command]
-pub async fn aria2_unpause_all(state: State<'_, Aria2State>) -> Result<String, AppError> {
-    state.0.unpause_all().await
 }
 
 /// Save the current aria2 session to disk.

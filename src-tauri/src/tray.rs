@@ -233,8 +233,13 @@ pub fn setup_tray(app: &AppHandle) -> Result<TrayMenuState, Box<dyn std::error::
                     let app = app.clone();
                     tauri::async_runtime::spawn(async move {
                         if let Some(aria2) = app.try_state::<crate::aria2::client::Aria2State>() {
-                            if let Err(e) = aria2.0.unpause_all().await {
-                                log::warn!("tray:resume-all failed: {e}");
+                            match aria2.0.resume_eligible().await {
+                                Ok(result) => log::info!(
+                                    "tray:resume-all resumed={} blocked={}",
+                                    result.resumed,
+                                    result.blocked
+                                ),
+                                Err(e) => log::warn!("tray:resume-all failed: {e}"),
                             }
                         }
                     });

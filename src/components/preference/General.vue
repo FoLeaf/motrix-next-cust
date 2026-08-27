@@ -4,7 +4,7 @@ import { ref, computed, watch, onMounted, h } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePreferenceStore } from '@/stores/preference'
 import { usePreferenceForm } from '@/composables/usePreferenceForm'
-import { useIpc } from '@/composables/useIpc'
+import { invoke } from '@tauri-apps/api/core'
 import { useEngineRestart } from '@/composables/useEngineRestart'
 import { relaunch } from '@tauri-apps/plugin-process'
 import { arch as osArch, version as osVersion } from '@tauri-apps/plugin-os'
@@ -13,7 +13,7 @@ import { getVersion as getAppVersion } from '@tauri-apps/api/app'
 import { getVersion as getAria2Version } from '@/api/aria2'
 import { getLocale } from 'tauri-plugin-locale-api'
 import { resolveSystemLocale } from '@shared/utils/locale'
-import { i18n } from '@/composables/useLocale'
+import { SUPPORTED_LOCALES, loadLocale } from '@/composables/useLocale'
 import { logger } from '@shared/logger'
 import { writeAppClipboardText } from '@shared/utils'
 import {
@@ -98,6 +98,9 @@ const { form, isDirty, handleSave, handleReset, patchSnapshot, resetSnapshot } =
       // Determine the actual target locale for bilingual dialog rendering.
       const targetLocale = f.locale === 'auto' ? detectedLocaleCode.value || 'en-US' : f.locale
       const isEn = targetLocale === 'en-US'
+      // Locale messages are lazy-loaded — pull in the target locale so the
+      // dialog can render in it (falls back to English if loading fails).
+      if (!isEn) await loadLocale(targetLocale)
       const tt = (key: string) => t(key, {}, { locale: targetLocale })
       dialog.info({
         style: 'min-width: 520px',
@@ -122,8 +125,7 @@ const { form, isDirty, handleSave, handleReset, patchSnapshot, resetSnapshot } =
           ? tt('preferences.language-changed-later')
           : `${tt('preferences.language-changed-later')} · Later`,
         onPositiveClick: async () => {
-          const { stopEngine } = useIpc()
-          await stopEngine()
+          await invoke('stop_engine_command')
           relaunch()
         },
       })
@@ -258,7 +260,7 @@ const { restartEngine } = useEngineRestart()
 function handleManualRestart() {
   const port = (preferenceStore.config.rpcListenPort as number) || ENGINE_RPC_PORT
   const secret = (preferenceStore.config.rpcSecret as string) || ''
-  const d = dialog.warning({
+  const d = dialog.info({
     title: t('preferences.engine-restart-title'),
     content: t('preferences.engine-restart-manual-confirm'),
     positiveText: t('preferences.engine-restart-now'),
@@ -299,7 +301,7 @@ onMounted(async () => {
   }
   try {
     const raw = (await getLocale()) || 'en-US'
-    detectedLocaleCode.value = resolveSystemLocale(raw, i18n.global.availableLocales)
+    detectedLocaleCode.value = resolveSystemLocale(raw, SUPPORTED_LOCALES)
   } catch (e) {
     logger.debug('General.detectLocale', e)
   }
@@ -540,16 +542,16 @@ onMounted(async () => {
   gap: 12px;
   height: 30px;
   padding: 0 10px;
-  border: 1px solid var(--m3-outline-variant, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--m3-outline-variant);
   border-radius: 8px;
-  background: var(--about-card-bg, rgba(255, 255, 255, 0.03));
+  background: var(--about-card-bg);
   cursor: pointer;
-  transition: var(--transition-all, 0.2s ease);
+  transition: var(--transition-all);
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
 }
 .sysinfo-ver-badge:hover {
-  border-color: var(--color-primary);
-  background: var(--about-card-hover-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--m3-primary);
+  background: var(--about-card-hover-bg);
 }
 .sysinfo-ver-badge:hover .sysinfo-ver-copy {
   opacity: 0.7;
@@ -560,27 +562,27 @@ onMounted(async () => {
 .sysinfo-ver-value {
   font-size: 13px;
   font-weight: 520;
-  color: var(--m3-on-surface, rgba(255, 255, 255, 0.9));
+  color: var(--m3-on-surface);
   letter-spacing: 0.3px;
 }
 .sysinfo-ver-copy {
   opacity: 0.35;
   margin-left: auto;
-  color: var(--m3-on-surface-variant, rgba(255, 255, 255, 0.5));
-  transition: var(--transition-all, 0.2s ease);
+  color: var(--m3-on-surface-variant);
+  transition: var(--transition-all);
   flex-shrink: 0;
 }
 .sysinfo-ver-badge--muted {
   cursor: default;
 }
 .sysinfo-ver-badge--muted:hover {
-  border-color: var(--m3-outline-variant, rgba(255, 255, 255, 0.08));
-  background: var(--about-card-bg, rgba(255, 255, 255, 0.03));
+  border-color: var(--m3-outline-variant);
+  background: var(--about-card-bg);
 }
 .sysinfo-ver-muted {
   font-size: 12px;
   font-weight: 500;
-  color: var(--m3-outline, rgba(255, 255, 255, 0.38));
+  color: var(--m3-outline);
   letter-spacing: 0.3px;
 }
 
@@ -616,7 +618,7 @@ onMounted(async () => {
   transform: scale(1.05);
 }
 .color-swatch.active {
-  border-color: var(--m3-on-surface, #fff);
+  border-color: var(--m3-on-surface);
   box-shadow:
     0 0 0 2px var(--swatch-color),
     0 2px 8px rgba(0, 0, 0, 0.25);

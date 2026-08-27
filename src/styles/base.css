@@ -18,7 +18,7 @@ body,
   font-family: var(--font-family);
   font-variant: tabular-nums;
   font-size: var(--font-size-base);
-  color: var(--color-text-primary);
+  color: var(--m3-on-surface);
   background: transparent;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -53,7 +53,7 @@ body,
 
 /* ── Base Element Styles ───────────────────────────────────────────── */
 a {
-  color: var(--color-primary);
+  color: var(--m3-primary);
   text-decoration: none;
 }
 

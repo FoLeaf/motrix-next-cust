@@ -13,14 +13,14 @@ const { t } = useI18n()
 <template>
   <div class="form-actions">
     <NSpace :size="12" align="center">
-      <NButton :class="{ 'save-btn-dirty': isDirty }" type="primary" @click="$emit('save')">
+      <NButton :type="isDirty ? 'primary' : 'default'" :disabled="!isDirty" @click="$emit('save')">
         {{ t('preferences.save') }}
       </NButton>
-      <NButton :class="{ 'discard-btn-dirty': isDirty }" @click="$emit('discard')">
+      <NButton :type="isDirty ? 'error' : 'default'" :ghost="isDirty" :disabled="!isDirty" @click="$emit('discard')">
         {{ t('preferences.discard') }}
       </NButton>
     </NSpace>
-    <NButton class="restart-engine-action-btn" @click="$emit('restart')">
+    <NButton type="info" ghost @click="$emit('restart')">
       <template #icon>
         <NIcon :size="16"><RefreshOutline /></NIcon>
       </template>
@@ -35,68 +35,5 @@ const { t } = useI18n()
   align-items: center;
   gap: 32px;
   padding: 16px 24px 16px 40px;
-}
-
-/* ── Restart Engine — M3 tertiary maintenance button ────────────── */
-/* Same size/shape as Save & Discard but with extra left gap (32px)  */
-/* from the NSpace group. Tertiary conveys "maintenance tool" — calm, */
-/* professional, visible in dark mode without alarm.                 */
-.restart-engine-action-btn {
-  color: var(--m3-tertiary) !important;
-  border-color: var(--m3-tertiary) !important;
-  transition:
-    color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    background-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    transform 0.15s cubic-bezier(0.2, 0, 0, 1);
-}
-.restart-engine-action-btn:hover {
-  color: var(--m3-tertiary) !important;
-  background-color: color-mix(in srgb, var(--m3-tertiary) 10%, transparent) !important;
-}
-.restart-engine-action-btn:active {
-  transform: scale(0.97);
-}
-.restart-engine-action-btn :deep(.n-button__border) {
-  border-color: var(--m3-tertiary) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.restart-engine-action-btn :deep(.n-button__state-border) {
-  border-color: var(--m3-tertiary) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* ── Save — dirty state with M3 emphasized enter (0.2, 0, 0, 1) ── */
-.save-btn-dirty {
-  background-color: var(--m3-success) !important;
-  transition:
-    background-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.save-btn-dirty :deep(.n-button__border) {
-  border-color: var(--m3-success) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.save-btn-dirty :deep(.n-button__state-border) {
-  border-color: var(--m3-success) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-
-/* ── Discard — dirty state (error-container tonal fill) ─────────── */
-.discard-btn-dirty {
-  background-color: var(--m3-error-container) !important;
-  color: var(--m3-error) !important;
-  transition:
-    background-color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    color 0.35s cubic-bezier(0.2, 0, 0, 1),
-    border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.discard-btn-dirty :deep(.n-button__border) {
-  border-color: var(--m3-error-container) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
-}
-.discard-btn-dirty :deep(.n-button__state-border) {
-  border-color: var(--m3-error-container) !important;
-  transition: border-color 0.35s cubic-bezier(0.2, 0, 0, 1);
 }
 </style>

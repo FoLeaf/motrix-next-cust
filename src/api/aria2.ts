@@ -217,21 +217,6 @@ export async function resumeTask(params: { gid: string }): Promise<string> {
   return invoke<string>('aria2_unpause', { gid: params.gid })
 }
 
-/** Pauses all active downloads (graceful). */
-export async function pauseAllTask(): Promise<string> {
-  return invoke<string>('aria2_pause_all')
-}
-
-/** Forcefully pauses all active downloads. */
-export async function forcePauseAllTask(): Promise<string> {
-  return invoke<string>('aria2_force_pause_all')
-}
-
-/** Resumes all paused downloads. */
-export async function resumeAllTask(): Promise<string> {
-  return invoke<string>('aria2_unpause_all')
-}
-
 /** Saves the current aria2 session to disk. */
 export async function saveSession(): Promise<string> {
   return invoke<string>('aria2_save_session')
@@ -289,9 +274,6 @@ const api = {
   forcePauseTask,
   pauseTask,
   resumeTask,
-  pauseAllTask,
-  forcePauseAllTask,
-  resumeAllTask,
   saveSession,
   removeTaskRecord,
   purgeTaskRecord,

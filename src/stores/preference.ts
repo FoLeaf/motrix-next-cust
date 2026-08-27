@@ -5,6 +5,7 @@ import { isEmpty } from 'lodash-es'
 import { load } from '@tauri-apps/plugin-store'
 import { invoke } from '@tauri-apps/api/core'
 import { getLangDirection, pushItemToFixedLengthArray, removeArrayItem } from '@shared/utils'
+import { activeLocale } from '@shared/utils/i18n'
 import { fetchBtTrackerFromSource } from '@shared/utils/tracker'
 import { DEFAULT_APP_CONFIG, MAX_NUM_OF_DIRECTORIES } from '@shared/constants'
 import { logger } from '@shared/logger'
@@ -14,22 +15,6 @@ import { recordRecentUserAgentProfileId } from '@shared/utils/userAgentPolicy'
 import type { AppConfig } from '@shared/types'
 
 const STORE_KEY = 'preferences'
-
-/**
- * Lazily reads the active vue-i18n locale without importing useLocale at
- * module scope (which would create a circular dependency in tests).
- */
-function readI18nLocale(): string {
-  try {
-    const { i18n } = require('@/composables/useLocale') as {
-      i18n: { global: { locale: { value: string } | string } }
-    }
-    const loc = i18n.global.locale
-    return typeof loc === 'string' ? loc : loc.value
-  } catch {
-    return 'en-US'
-  }
-}
 
 export const usePreferenceStore = defineStore('preference', () => {
   const engineMode = ref('MAX')
@@ -58,7 +43,7 @@ export const usePreferenceStore = defineStore('preference', () => {
   const resolvedLocale = computed(() => {
     const l = config.value.locale
     if (!l || l === 'auto') {
-      return readI18nLocale()
+      return activeLocale.value
     }
     return l
   })

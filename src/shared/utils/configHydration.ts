@@ -9,9 +9,10 @@ import {
 } from '@shared/constants'
 import { getAllowedColorSchemeIds, normalizeCustomColorScheme } from '@shared/utils/colorSchemeConfig'
 import { runMigrations, type MigrationResult } from '@shared/utils/configMigration'
-import { normalizeProxyMode } from '@shared/utils/proxyPolicy'
+import { normalizeProxyMode } from '@shared/utils/proxy'
 import type { AppConfig, ClipboardConfig, PortConflictRecoveryConfig, ProxyConfig } from '@shared/types'
 import { normalizeFileCategory } from '@shared/utils/fileCategory'
+import { isValidOptionalIpAddress } from '@shared/utils/ipAddress'
 import {
   normalizeRecentUserAgentProfileIds,
   normalizeUserAgentProfiles,
@@ -80,6 +81,19 @@ function isValidPort(value: unknown): boolean {
 function normalizePositiveNumber(value: unknown, fallback: number, key: string, repairs: string[]): number {
   const number = Number(value)
   if (Number.isFinite(number) && number >= 0) return number
+  repairs.push(key)
+  return fallback
+}
+
+function normalizeHttpUrl(value: unknown, fallback: string, key: string, repairs: string[]): string {
+  if (typeof value === 'string') {
+    try {
+      const url = new URL(value.trim())
+      if (url.protocol === 'http:' || url.protocol === 'https:') return url.toString()
+    } catch {
+      // Repaired below.
+    }
+  }
   repairs.push(key)
   return fallback
 }
@@ -196,6 +210,7 @@ function normalizeScalarValues(config: Record<string, unknown>, repairs: string[
   repairEnum(config, 'logLevel', APP_LOG_LEVELS, DEFAULT_APP_CONFIG.logLevel, repairs)
   repairEnum(config, 'aria2LogLevel', ARIA2_LOG_LEVELS, DEFAULT_APP_CONFIG.aria2LogLevel, repairs)
   repairEnum(config, 'fileAllocation', FILE_ALLOCATION_OPTIONS, DEFAULT_APP_CONFIG.fileAllocation, repairs)
+  repairEnum(config, 'fileDeletionMode', ['trash', 'permanent'] as const, DEFAULT_APP_CONFIG.fileDeletionMode, repairs)
 
   config.rpcListenPort = normalizePort(config.rpcListenPort, DEFAULT_APP_CONFIG.rpcListenPort, 'rpcListenPort', repairs)
   config.extensionApiPort = normalizePort(
@@ -205,6 +220,18 @@ function normalizeScalarValues(config: Record<string, unknown>, repairs: string[
     repairs,
   )
   config.listenPort = normalizePort(config.listenPort, DEFAULT_APP_CONFIG.listenPort, 'listenPort', repairs)
+  config.btExternalPort = normalizePort(
+    config.btExternalPort,
+    DEFAULT_APP_CONFIG.btExternalPort,
+    'btExternalPort',
+    repairs,
+  )
+  if (typeof config.btExternalIp !== 'string' || !isValidOptionalIpAddress(config.btExternalIp)) {
+    config.btExternalIp = DEFAULT_APP_CONFIG.btExternalIp
+    repairs.push('btExternalIp')
+  } else {
+    config.btExternalIp = config.btExternalIp.trim()
+  }
   config.dhtListenPort = normalizePort(config.dhtListenPort, DEFAULT_APP_CONFIG.dhtListenPort, 'dhtListenPort', repairs)
   config.ed2kListenPort = normalizePort(
     config.ed2kListenPort,
@@ -245,6 +272,20 @@ function normalizeScalarValues(config: Record<string, unknown>, repairs: string[
     config.btTrackerSyncIntervalHours,
     DEFAULT_APP_CONFIG.btTrackerSyncIntervalHours,
     'btTrackerSyncIntervalHours',
+    repairs,
+  )
+  config.btPeerBlocklistSyncIntervalHours = normalizeBoundedInteger(
+    config.btPeerBlocklistSyncIntervalHours,
+    DEFAULT_APP_CONFIG.btPeerBlocklistSyncIntervalHours,
+    0,
+    8760,
+    'btPeerBlocklistSyncIntervalHours',
+    repairs,
+  )
+  config.btPeerBlocklistUrl = normalizeHttpUrl(
+    config.btPeerBlocklistUrl,
+    DEFAULT_APP_CONFIG.btPeerBlocklistUrl,
+    'btPeerBlocklistUrl',
     repairs,
   )
   config.ed2kBootstrapSyncIntervalHours = normalizePositiveNumber(

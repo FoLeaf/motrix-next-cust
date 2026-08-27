@@ -133,7 +133,7 @@ defineEmits<{
 .subnav-button:hover :deep(.subnav-count),
 .subnav-button.active :deep(.subnav-count),
 .subnav-button:focus-visible :deep(.subnav-count) {
-  background: color-mix(in srgb, var(--subnav-active-text) 14%, transparent);
+  background: color-mix(in srgb, var(--m3-primary) 14%, transparent);
 }
 
 .subnav-button span,

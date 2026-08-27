@@ -14,7 +14,6 @@ import {
 } from '../useGeneralPreference'
 import type { AppConfig } from '@shared/types'
 import { DEFAULT_APP_CONFIG } from '@shared/constants'
-import { userKeys } from '@shared/configKeys'
 
 // ── buildGeneralForm ────────────────────────────────────────────────
 
@@ -125,10 +124,6 @@ describe('buildGeneralForm', () => {
   it('preserves every-startup autoCheckUpdateInterval from config', () => {
     const form = buildGeneralForm({ autoCheckUpdateInterval: 0 } as unknown as AppConfig)
     expect(form.autoCheckUpdateInterval).toBe(0)
-  })
-
-  it('persists autoCheckUpdateInterval as a user config key', () => {
-    expect(userKeys).toContain('auto-check-update-interval')
   })
 
   it('exposes all supported update channels', async () => {

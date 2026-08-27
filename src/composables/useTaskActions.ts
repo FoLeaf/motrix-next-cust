@@ -43,6 +43,13 @@ interface TaskActionsDeps {
 export function useTaskActions(deps: TaskActionsDeps) {
   const { taskStore, preferenceConfig, t, dialog, message, stoppingGids } = deps
 
+  const deleteFilesLabel = () =>
+    t(
+      preferenceConfig().fileDeletionMode === 'permanent'
+        ? 'task.delete-local-files-permanent-label'
+        : 'task.delete-local-files-trash-label',
+    )
+
   function handlePauseTask(task: Aria2Task) {
     const taskName = getTaskDisplayName(task, { defaultName: 'Unknown' })
     taskStore
@@ -72,7 +79,9 @@ export function useTaskActions(deps: TaskActionsDeps) {
     } else {
       taskStore
         .resumeTask(task)
-        .then(() => message.success(t('task.resume-task-success', { taskName })))
+        .then((resumed) => {
+          if (resumed !== false) message.success(t('task.resume-task-success', { taskName }))
+        })
         .catch((e) => {
           logger.warn('TaskView.resumeTask', getErrorMessage(e))
           message.error(t('task.resume-task-fail', { taskName }))
@@ -81,20 +90,31 @@ export function useTaskActions(deps: TaskActionsDeps) {
   }
 
   function handleDeleteTask(task: Aria2Task) {
-    const noConfirm = preferenceConfig()?.noConfirmBeforeDeleteTask
+    const config = preferenceConfig()
+    const noConfirm = config.noConfirmBeforeDeleteTask
     if (noConfirm) {
-      const alsoDeleteFiles = preferenceConfig()?.deleteFilesWhenSkipConfirm
+      const alsoDeleteFiles = config.deleteFilesWhenSkipConfirm
       taskStore
         .removeTask(task)
         .then(async () => {
-          if (alsoDeleteFiles) await deleteTaskFiles(task)
+          if (alsoDeleteFiles) {
+            try {
+              await deleteTaskFiles(task, config.fileDeletionMode)
+            } catch (error) {
+              logger.error('TaskView.deleteTaskFiles', error)
+              message.error(t('task.remove-task-file-fail'))
+            }
+          }
         })
-        .catch((e: unknown) => logger.error('TaskView', e))
+        .catch((error: unknown) => {
+          logger.error('TaskView.deleteTask', error)
+          message.error(t('task.delete-task-fail', { taskName: getTaskDisplayName(task, { defaultName: 'Unknown' }) }))
+        })
       return
     }
     const deleteFiles = ref(false)
     const name = getTaskDisplayName(task, { defaultName: 'Unknown' })
-    const d = dialog.warning({
+    const d = dialog.error({
       title: t('task.delete-task'),
       content: () =>
         h('div', {}, [
@@ -107,7 +127,7 @@ export function useTaskActions(deps: TaskActionsDeps) {
                 deleteFiles.value = v
               },
             },
-            { default: () => t('task.delete-task-label') },
+            { default: deleteFilesLabel },
           ),
         ]),
       positiveText: t('app.yes'),
@@ -121,7 +141,13 @@ export function useTaskActions(deps: TaskActionsDeps) {
         try {
           await taskStore.removeTask(task)
           if (deleteFiles.value) {
-            await deleteTaskFiles(task)
+            try {
+              await deleteTaskFiles(task, config.fileDeletionMode)
+            } catch (error) {
+              logger.error('TaskView.deleteTaskFiles', error)
+              message.error(t('task.remove-task-file-fail'))
+              return
+            }
           }
           message.success(t('task.delete-task-success', { taskName: name }))
         } catch (e) {
@@ -133,14 +159,23 @@ export function useTaskActions(deps: TaskActionsDeps) {
   }
 
   function handleDeleteRecord(task: Aria2Task) {
-    const noConfirm = preferenceConfig()?.noConfirmBeforeDeleteTask
+    const config = preferenceConfig()
+    const noConfirm = config.noConfirmBeforeDeleteTask
     if (noConfirm) {
-      const alsoDeleteFiles = preferenceConfig()?.deleteFilesWhenSkipConfirm
+      const alsoDeleteFiles = config.deleteFilesWhenSkipConfirm
       const taskRef = task
       taskStore
         .removeTaskRecord(task)
         .then(async () => {
-          if (alsoDeleteFiles) await deleteTaskFiles(taskRef)
+          if (alsoDeleteFiles) {
+            try {
+              await deleteTaskFiles(taskRef, config.fileDeletionMode)
+            } catch (error) {
+              logger.error('TaskView.deleteRecordFiles', error)
+              message.error(t('task.remove-task-file-fail'))
+              return
+            }
+          }
           message.success(
             t('task.remove-record-success', { taskName: getTaskDisplayName(taskRef, { defaultName: 'Unknown' }) }),
           )
@@ -150,7 +185,7 @@ export function useTaskActions(deps: TaskActionsDeps) {
     }
     const deleteFiles = ref(false)
     const name = getTaskDisplayName(task, { defaultName: 'Unknown' })
-    const d = dialog.warning({
+    const d = dialog.error({
       title: t('task.delete-task'),
       content: () =>
         h('div', {}, [
@@ -163,7 +198,7 @@ export function useTaskActions(deps: TaskActionsDeps) {
                 deleteFiles.value = v
               },
             },
-            { default: () => t('task.delete-task-label') },
+            { default: deleteFilesLabel },
           ),
         ]),
       positiveText: t('app.yes'),
@@ -176,7 +211,13 @@ export function useTaskActions(deps: TaskActionsDeps) {
         await new Promise((r) => setTimeout(r, 50))
         try {
           if (deleteFiles.value) {
-            await deleteTaskFiles(task)
+            try {
+              await deleteTaskFiles(task, config.fileDeletionMode)
+            } catch (error) {
+              logger.error('TaskView.deleteRecordFiles', error)
+              message.error(t('task.remove-task-file-fail'))
+              return
+            }
           }
           await taskStore.removeTaskRecord(task)
           message.success(t('task.delete-task-success', { taskName: name }))

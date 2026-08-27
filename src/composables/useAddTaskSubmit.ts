@@ -45,10 +45,10 @@ import {
 } from '@shared/utils/headerSanitize'
 import { summarizeHeaderForwarding } from '@shared/utils/externalInputDiagnostics'
 import { getErrorMessage } from '@shared/utils/errorMessage'
-import { buildTaskProxyOptions, getDownloadProxy, type TaskProxyMode } from '@shared/utils/proxyPolicy'
+import { buildTaskProxyOptions, getDownloadProxy, type TaskProxyMode } from '@shared/utils/proxy'
 import { resolveUserAgentFromContext } from '@shared/utils/userAgentPolicy'
 
-export { getDownloadProxy } from '@shared/utils/proxyPolicy'
+export { getDownloadProxy } from '@shared/utils/proxy'
 
 export interface AddTaskForm {
   uris: string

@@ -59,9 +59,6 @@ import {
   pauseTask,
   resumeTask,
   forcePauseTask,
-  pauseAllTask,
-  forcePauseAllTask,
-  resumeAllTask,
   saveSession,
   removeTaskRecord,
   purgeTaskRecord,
@@ -130,10 +127,11 @@ describe('aria2 API (invoke transport)', () => {
     })
 
     it('getOption invokes with gid and converts to camelCase', async () => {
-      mockInvoke.mockResolvedValueOnce({ 'max-download-limit': '0' })
+      mockInvoke.mockResolvedValueOnce({ 'max-download-limit': '0', 'select-file': '2-9' })
       const result = await getOption({ gid: 'abc' })
       expect(mockInvoke).toHaveBeenCalledWith('aria2_get_option', { gid: 'abc' })
       expect(result).toHaveProperty('maxDownloadLimit')
+      expect(result).toHaveProperty('selectFile', '2-9')
     })
 
     it('changeOption invokes with gid and formatted options', async () => {
@@ -533,21 +531,6 @@ describe('aria2 API (invoke transport)', () => {
     it('resumeTask invokes aria2_unpause', async () => {
       await resumeTask({ gid: 'abc' })
       expect(mockInvoke).toHaveBeenCalledWith('aria2_unpause', { gid: 'abc' })
-    })
-
-    it('pauseAllTask invokes aria2_pause_all', async () => {
-      await pauseAllTask()
-      expect(mockInvoke).toHaveBeenCalledWith('aria2_pause_all')
-    })
-
-    it('forcePauseAllTask invokes aria2_force_pause_all', async () => {
-      await forcePauseAllTask()
-      expect(mockInvoke).toHaveBeenCalledWith('aria2_force_pause_all')
-    })
-
-    it('resumeAllTask invokes aria2_unpause_all', async () => {
-      await resumeAllTask()
-      expect(mockInvoke).toHaveBeenCalledWith('aria2_unpause_all')
     })
 
     it('saveSession invokes aria2_save_session', async () => {

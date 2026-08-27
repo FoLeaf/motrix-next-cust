@@ -35,7 +35,7 @@ import { useEd2kSearchSession } from '@/composables/useEd2kSearchSession'
 import { BT_LISTEN_PORT, DHT_LISTEN_PORT, ENGINE_RPC_PORT, PROXY_SCOPES } from '@shared/constants'
 import { diffConfig, checkIsNeedRestart } from '@shared/utils/config'
 import { bytesToSize } from '@shared/utils'
-import { resolveAppProxyUrl } from '@shared/utils/appProxyPolicy'
+import { resolveAppProxyUrl } from '@shared/utils/proxy'
 import { getErrorMessage } from '@shared/utils/errorMessage'
 import { logger } from '@shared/logger'
 import type { Ed2kSearchResult } from '@shared/types'
@@ -131,7 +131,7 @@ const { form, isDirty, handleSave, handleReset, resetSnapshot } = usePreferenceF
     const changed = diffConfig(preferenceStore.config, transformEd2kForStore(f))
     if (checkIsNeedRestart(changed)) {
       const ok = await new Promise<boolean>((resolve) => {
-        dialog.warning({
+        dialog.info({
           title: t('preferences.engine-restart-title'),
           content: t('preferences.engine-restart-confirm'),
           positiveText: t('preferences.engine-restart-now'),
@@ -179,6 +179,7 @@ async function syncUpnpState(ed2kPort: number, ed2kUdpPort: number) {
   try {
     await invoke('start_upnp_mapping', {
       btPort: Number(preferenceStore.config.listenPort) || BT_LISTEN_PORT,
+      btExternalPort: Number(preferenceStore.config.btExternalPort) || 0,
       dhtPort: Number(preferenceStore.config.dhtListenPort) || DHT_LISTEN_PORT,
       ed2kPort: ed2kPort > 0 ? ed2kPort : null,
       ed2kUdpPort: ed2kUdpPort > 0 ? ed2kUdpPort : null,
@@ -287,7 +288,7 @@ const resultColumns = computed(() => [
 function handleManualRestart() {
   const port = (preferenceStore.config.rpcListenPort as number) || ENGINE_RPC_PORT
   const secret = (preferenceStore.config.rpcSecret as string) || ''
-  const d = dialog.warning({
+  const d = dialog.info({
     title: t('preferences.engine-restart-title'),
     content: t('preferences.engine-restart-manual-confirm'),
     positiveText: t('preferences.engine-restart-now'),
@@ -380,7 +381,7 @@ onMounted(() => {
               <template #icon>
                 <NIcon><DiceOutline /></NIcon>
               </template>
-              {{ t('preferences.ed2k-random-port') }}
+              {{ t('preferences.random-port') }}
             </NButton>
           </NInputGroup>
         </NFormItem>
@@ -391,7 +392,7 @@ onMounted(() => {
               <template #icon>
                 <NIcon><DiceOutline /></NIcon>
               </template>
-              {{ t('preferences.ed2k-random-port') }}
+              {{ t('preferences.random-port') }}
             </NButton>
           </NInputGroup>
         </NFormItem>
@@ -437,7 +438,7 @@ onMounted(() => {
           />
         </NFormItem>
         <NFormItem label=" ">
-          <div class="pref-inline-row">
+          <div class="pref-action-stack">
             <NButton
               class="pref-action-button ed2k-bootstrap-sync-button"
               :loading="bootstrapSyncing"
@@ -465,9 +466,6 @@ onMounted(() => {
 .search-results {
   width: 100%;
   min-width: 0;
-}
-.pref-action-button--compact {
-  min-width: fit-content;
 }
 .ed2k-bootstrap-sync-button {
   min-width: 100px;

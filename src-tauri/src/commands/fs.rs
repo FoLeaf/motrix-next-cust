@@ -1,42 +1,18 @@
 use crate::engine::{valid_aria2_log_level, DEFAULT_ARIA2_LOG_LEVEL};
 use crate::error::AppError;
+use crate::log_policy::{
+    is_managed_active_log_file, remove_legacy_log_files, ARIA2_LOG_FILE, MOTRIX_LOG_FILE,
+};
+use serde::Deserialize;
 use serde_json::Value;
 use std::path::Path;
 use tauri::AppHandle;
-use tauri::Manager;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum ManagedLogFileKind {
-    Active,
-    Rotated,
-}
-
-fn is_aria2_rotated_log_file(name: &str) -> bool {
-    let Some(index) = name
-        .strip_prefix("aria2-next.")
-        .and_then(|rest| rest.strip_suffix(".log"))
-    else {
-        return false;
-    };
-    !index.is_empty() && index.bytes().all(|byte| byte.is_ascii_digit())
-}
-
-fn managed_log_file_kind(name: &str) -> Option<ManagedLogFileKind> {
-    if name == "motrix-next-opt.log" || name == "motrix-next.log" || name == "aria2-next.log" {
-        Some(ManagedLogFileKind::Active)
-    } else if is_aria2_rotated_log_file(name) {
-        Some(ManagedLogFileKind::Rotated)
-    } else {
-        None
-    }
-}
-
 fn diagnostic_log_zip_path(name: &str) -> Option<String> {
     if name == "motrix-next-opt.log" {
         Some(format!("motrix-next-opt/{name}"))
-    } else if name == "motrix-next.log" {
+    } else if name == MOTRIX_LOG_FILE {
         Some(format!("motrix-next/{name}"))
-    } else if name == "aria2-next.log" || is_aria2_rotated_log_file(name) {
+    } else if name == ARIA2_LOG_FILE {
         Some(format!("aria2-next/{name}"))
     } else {
         None
@@ -126,8 +102,8 @@ fn sanitize_config_snapshot(raw: &Value) -> Value {
 /// Logging strategy (privacy-safe):
 /// - `info!`: argument count and boolean result only
 /// - `debug!`: structured diagnostics (match type counts) — no raw argv,
-///   because the default log level is `Debug` and diagnostic exports bundle
-///   all log files into user-submitted ZIPs
+///   because diagnostic exports can include debug logs when users enable them
+///   for issue reproduction
 #[tauri::command]
 pub fn is_autostart_launch(lifecycle: tauri::State<'_, crate::AppLifecycleState>) -> bool {
     // After the cold-start phase ends (user dismissed the window at least
@@ -160,6 +136,8 @@ fn clear_managed_log_files_in_dir(log_dir: &Path) -> Result<(), AppError> {
     if !log_dir.exists() {
         return Ok(());
     }
+    remove_legacy_log_files(log_dir)
+        .map_err(|e| AppError::Io(format!("Failed to remove legacy logs: {e}")))?;
     for entry in std::fs::read_dir(log_dir)
         .map_err(|e| AppError::Io(format!("Failed to read log dir: {e}")))?
         .flatten()
@@ -172,19 +150,12 @@ fn clear_managed_log_files_in_dir(log_dir: &Path) -> Result<(), AppError> {
         if !path.is_file() {
             continue;
         }
-        match managed_log_file_kind(name) {
-            Some(ManagedLogFileKind::Active) => {
-                std::fs::OpenOptions::new()
-                    .write(true)
-                    .truncate(true)
-                    .open(&path)
-                    .map_err(|e| AppError::Io(format!("Failed to clear active log: {e}")))?;
-            }
-            Some(ManagedLogFileKind::Rotated) => {
-                std::fs::remove_file(&path)
-                    .map_err(|e| AppError::Io(format!("Failed to remove rotated log: {e}")))?;
-            }
-            None => {}
+        if is_managed_active_log_file(name) {
+            std::fs::OpenOptions::new()
+                .write(true)
+                .truncate(true)
+                .open(&path)
+                .map_err(|e| AppError::Io(format!("Failed to clear active log: {e}")))?;
         }
     }
     Ok(())
@@ -403,55 +374,27 @@ mod export_tests {
             diagnostic_log_zip_path("aria2-next.log"),
             Some("aria2-next/aria2-next.log".to_string())
         );
-        assert_eq!(
-            diagnostic_log_zip_path("aria2-next.1.log"),
-            Some("aria2-next/aria2-next.1.log".to_string())
-        );
-        assert_eq!(diagnostic_log_zip_path("other.log"), None);
+        assert_eq!(diagnostic_log_zip_path("aria2-next.1.log"), None);
         assert_eq!(diagnostic_log_zip_path("aria2-next.log.1"), None);
+        assert_eq!(diagnostic_log_zip_path("other.log"), None);
         assert_eq!(diagnostic_log_zip_path("motrix-next.log.1"), None);
     }
 
     #[test]
-    fn managed_log_file_kind_classifies_current_log_names_only() {
-        assert_eq!(
-            managed_log_file_kind("motrix-next-opt.log"),
-            Some(ManagedLogFileKind::Active)
-        );
-        assert_eq!(
-            managed_log_file_kind("motrix-next.log"),
-            Some(ManagedLogFileKind::Active)
-        );
-        assert_eq!(
-            managed_log_file_kind("aria2-next.log"),
-            Some(ManagedLogFileKind::Active)
-        );
-        assert_eq!(
-            managed_log_file_kind("aria2-next.1.log"),
-            Some(ManagedLogFileKind::Rotated)
-        );
-        assert_eq!(
-            managed_log_file_kind("aria2-next.20.log"),
-            Some(ManagedLogFileKind::Rotated)
-        );
-        assert_eq!(managed_log_file_kind("aria2-next.log.1"), None);
-        assert_eq!(managed_log_file_kind("motrix-next.log.1"), None);
-        assert_eq!(managed_log_file_kind("other.log"), None);
-    }
-
-    #[test]
-    fn clear_managed_log_files_truncates_active_logs_and_removes_rotated_logs() {
+    fn clear_managed_log_files_truncates_active_logs_and_removes_legacy_logs() {
         let dir = tempfile::tempdir().expect("tempdir");
         let motrix = dir.path().join("motrix-next-opt.log");
         let aria2 = dir.path().join("aria2-next.log");
         let rotated = dir.path().join("aria2-next.1.log");
-        let legacy = dir.path().join("aria2-next.log.1");
+        let current_rotated = dir.path().join("aria2-next.log.1");
+        let motrix_rotated = dir.path().join("motrix-next.log.1");
         let other = dir.path().join("other.log");
 
         std::fs::write(&motrix, "motrix log").expect("motrix log");
         std::fs::write(&aria2, "aria2 log").expect("aria2 log");
         std::fs::write(&rotated, "rotated log").expect("rotated log");
-        std::fs::write(&legacy, "legacy log").expect("legacy log");
+        std::fs::write(&current_rotated, "rotated log").expect("current rotated log");
+        std::fs::write(&motrix_rotated, "rotated log").expect("motrix rotated log");
         std::fs::write(&other, "other log").expect("other log");
 
         clear_managed_log_files_in_dir(dir.path()).expect("clear logs");
@@ -462,10 +405,8 @@ mod export_tests {
         );
         assert_eq!(std::fs::metadata(&aria2).expect("aria2 metadata").len(), 0);
         assert!(!rotated.exists());
-        assert_eq!(
-            std::fs::read_to_string(&legacy).expect("legacy content"),
-            "legacy log"
-        );
+        assert!(!current_rotated.exists());
+        assert!(!motrix_rotated.exists());
         assert_eq!(
             std::fs::read_to_string(&other).expect("other content"),
             "other log"
@@ -492,7 +433,7 @@ mod export_tests {
 
     #[test]
     fn config_aria2_log_level_reads_current_field_only() {
-        assert_eq!(config_aria2_log_level(None), "notice");
+        assert_eq!(config_aria2_log_level(None), "warn");
         assert_eq!(
             config_aria2_log_level(Some(&serde_json::json!({
                 "preferences": { "aria2LogLevel": "debug" }
@@ -501,21 +442,15 @@ mod export_tests {
         );
         assert_eq!(
             config_aria2_log_level(Some(&serde_json::json!({
-                "preferences": { "aria2LogLevel": "notice" }
-            }))),
-            "notice"
-        );
-        assert_eq!(
-            config_aria2_log_level(Some(&serde_json::json!({
                 "preferences": { "aria2LogLevel": "verbose" }
             }))),
-            "notice"
+            "warn"
         );
         assert_eq!(
             config_aria2_log_level(Some(&serde_json::json!({
                 "preferences": { "aria2LogsEnabled": false }
             }))),
-            "notice"
+            "warn"
         );
     }
 }
@@ -778,16 +713,40 @@ pub fn open_path_normalized(app: AppHandle, path: String) -> Result<(), AppError
         .map_err(|e| AppError::Io(format!("Failed to open {}: {}", path, e)))
 }
 
-/// Moves a file to the OS trash / recycle bin.
-///
-/// Uses the `trash` crate for cross-platform support:
-/// - macOS: NSFileManager.trashItemAtURL
-/// - Windows: IFileOperation + FOFX_RECYCLEONDELETE
-/// - Linux: FreeDesktop Trash spec (XDG_DATA_HOME/Trash)
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FileDeletionMode {
+    Trash,
+    Permanent,
+}
+
 #[tauri::command]
-pub fn trash_file(path: String) -> Result<(), AppError> {
-    log::info!("file:trash path={path:?}");
-    trash::delete(&path).map_err(|e| AppError::Io(e.to_string()))
+pub fn delete_path(path: String, mode: FileDeletionMode) -> Result<bool, AppError> {
+    if path.trim().is_empty() {
+        return Ok(false);
+    }
+
+    let target = Path::new(&path);
+    let metadata = match std::fs::symlink_metadata(target) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(false),
+        Err(error) => return Err(AppError::Io(error.to_string())),
+    };
+
+    log::info!("file:delete mode={mode:?} path={path:?}");
+    match mode {
+        FileDeletionMode::Trash => {
+            trash::delete(target).map_err(|error| AppError::Io(error.to_string()))?
+        }
+        FileDeletionMode::Permanent if metadata.file_type().is_dir() => {
+            std::fs::remove_dir_all(target).map_err(|error| AppError::Io(error.to_string()))?;
+        }
+        FileDeletionMode::Permanent => {
+            std::fs::remove_file(target).map_err(|error| AppError::Io(error.to_string()))?;
+        }
+    }
+
+    Ok(true)
 }
 
 /// Moves a file to a target directory, creating the directory if needed.
@@ -873,25 +832,6 @@ pub fn move_file(source: String, target_dir: String) -> Result<String, AppError>
     // Normalize to forward slashes — aria2 and the frontend canonicalize
     // all paths with `/`.  On Windows, PathBuf::join() produces `\`.
     Ok(crate::engine::path_to_safe_string(&dest).replace('\\', "/"))
-}
-
-/// Permanently deletes a file from disk (NOT move to trash).
-///
-/// Used for internal aria2 metadata files that have no user value:
-/// - `.aria2` control files (piece bitmap + checksums)
-/// - hex40-named `.torrent` metadata (`rpc-save-upload-metadata`)
-///
-/// This replicates what aria2's native `removeControlFile()` does (`std::remove`).
-/// The frontend MUST only call this for files it has verified are internal
-/// aria2 metadata — never for user-downloaded content (use `trash_file` instead).
-#[tauri::command]
-pub fn remove_file(path: String) -> Result<(), AppError> {
-    let p = std::path::Path::new(&path);
-    if !p.exists() {
-        return Ok(());
-    }
-    log::debug!("file:remove path={path:?}");
-    std::fs::remove_file(p).map_err(|e| AppError::Io(e.to_string()))
 }
 
 #[cfg(test)]
@@ -1019,70 +959,74 @@ mod tests {
         assert_eq!(result, "/var/log/app.log");
     }
 
-    // ── remove_file ─────────────────────────────────────────────────
+    // ── delete_path ─────────────────────────────────────────────────
 
     #[test]
-    fn remove_file_deletes_existing_file() {
-        let dir = std::env::temp_dir().join("motrix_test_remove");
-        let _ = std::fs::create_dir_all(&dir);
-        let file = dir.join("test.aria2");
+    fn delete_path_permanently_deletes_existing_file() {
+        let dir = tempfile::tempdir().expect("create temp dir");
+        let file = dir.path().join("test.aria2");
         std::fs::write(&file, "control data").expect("write test file");
-        assert!(file.exists(), "precondition: file must exist");
 
-        let result = remove_file(file.to_string_lossy().to_string());
-        assert!(result.is_ok());
+        let result = delete_path(
+            file.to_string_lossy().to_string(),
+            FileDeletionMode::Permanent,
+        );
+        assert!(result.expect("delete file"));
         assert!(!file.exists(), "file must be permanently deleted");
-
-        // Cleanup
-        let _ = std::fs::remove_dir(&dir);
     }
 
     #[test]
-    fn remove_file_returns_ok_for_nonexistent() {
-        let result = remove_file("/definitely/does/not/exist/file.aria2".to_string());
+    fn delete_path_permanently_deletes_directory_tree() {
+        let root = tempfile::tempdir().expect("create temp dir");
+        let directory = root.path().join("download");
+        std::fs::create_dir_all(directory.join("nested")).expect("create directory tree");
+        std::fs::write(directory.join("nested/file.bin"), "data").expect("write file");
+
+        let result = delete_path(
+            directory.to_string_lossy().to_string(),
+            FileDeletionMode::Permanent,
+        );
+        assert!(result.expect("delete directory"));
         assert!(
-            result.is_ok(),
-            "remove_file must be a silent no-op for missing files"
+            !directory.exists(),
+            "directory tree must be permanently deleted"
         );
     }
 
     #[test]
-    fn remove_file_returns_ok_for_empty_string() {
-        let result = remove_file(String::new());
-        assert!(
-            result.is_ok(),
-            "remove_file must handle empty path gracefully"
+    fn delete_path_returns_false_for_nonexistent_path() {
+        let result = delete_path(
+            "/definitely/does/not/exist/file.aria2".to_string(),
+            FileDeletionMode::Permanent,
         );
+        assert!(!result.expect("missing path is a no-op"));
     }
 
     #[test]
-    fn remove_file_handles_path_with_spaces() {
-        let dir = std::env::temp_dir().join("motrix test remove spaces");
-        let _ = std::fs::create_dir_all(&dir);
-        let file = dir.join("my download.aria2");
-        std::fs::write(&file, "data").expect("write");
-
-        let result = remove_file(file.to_string_lossy().to_string());
-        assert!(result.is_ok());
-        assert!(!file.exists());
-
-        let _ = std::fs::remove_dir(&dir);
+    fn delete_path_returns_false_for_empty_path() {
+        let result = delete_path(String::new(), FileDeletionMode::Permanent);
+        assert!(!result.expect("empty path is a no-op"));
     }
 
+    #[cfg(unix)]
     #[test]
-    fn remove_file_does_not_delete_directories() {
-        let dir = std::env::temp_dir().join("motrix_test_remove_dir_guard");
-        let _ = std::fs::create_dir_all(&dir);
-        assert!(dir.exists(), "precondition: dir must exist");
+    fn delete_path_removes_symlink_without_following_target() {
+        let root = tempfile::tempdir().expect("create temp dir");
+        let target = root.path().join("target");
+        let link = root.path().join("link");
+        std::fs::create_dir_all(&target).expect("create target");
+        std::fs::write(target.join("file.bin"), "data").expect("write target file");
+        std::os::unix::fs::symlink(&target, &link).expect("create symlink");
 
-        // std::fs::remove_file on a directory fails — verify it returns Err
-        let result = remove_file(dir.to_string_lossy().to_string());
-        assert!(result.is_err(), "remove_file must not delete directories");
-        assert!(
-            dir.exists(),
-            "directory must still exist after failed removal"
+        let result = delete_path(
+            link.to_string_lossy().to_string(),
+            FileDeletionMode::Permanent,
         );
-
-        let _ = std::fs::remove_dir(&dir);
+        assert!(result.expect("delete symlink"));
+        assert!(!link.exists(), "symlink must be deleted");
+        assert!(
+            target.join("file.bin").exists(),
+            "symlink target must remain"
+        );
     }
 }

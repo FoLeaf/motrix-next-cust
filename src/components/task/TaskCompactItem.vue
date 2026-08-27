@@ -46,21 +46,17 @@ const {
 } = useTaskCardModel(taskRef)
 const { fileMissing } = useTaskFileMissing(taskRef)
 
-function cssVar(name: string, fallback: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback
+const statusColorMap: Record<string, string> = {
+  active: 'var(--m3-status-active)',
+  waiting: 'var(--m3-status-waiting)',
+  paused: 'var(--m3-status-paused)',
+  error: 'var(--m3-status-error)',
+  complete: 'var(--m3-status-success)',
+  removed: 'var(--m3-status-paused)',
+  sharing: 'var(--m3-status-success)',
 }
 
-const statusColorMap = computed<Record<string, string>>(() => ({
-  active: cssVar('--m3-status-active', ''),
-  waiting: cssVar('--m3-status-waiting', ''),
-  paused: cssVar('--m3-status-paused', '#909399'),
-  error: cssVar('--m3-status-error', '#F56C6C'),
-  complete: cssVar('--m3-status-success', '#67C23A'),
-  removed: cssVar('--m3-status-paused', '#909399'),
-  sharing: cssVar('--m3-status-success', '#67C23A'),
-}))
-
-const progressColor = computed(() => statusColorMap.value[taskStatus.value] || cssVar('--m3-status-active', ''))
+const progressColor = computed(() => statusColorMap[taskStatus.value] || 'var(--m3-status-active)')
 
 const compactStatus = computed<{ label: string; tone: string; icon: Component } | null>(() => {
   if (fileMissing.value) {
@@ -133,7 +129,6 @@ onBeforeUnmount(() => {
     ref="cardRef"
     class="task-compact-item"
     :class="{
-      'file-missing': fileMissing,
       'is-sharing': isSharing,
       'sharing-enter': sharingEnter,
     }"
@@ -230,9 +225,6 @@ onBeforeUnmount(() => {
 .task-compact-item.is-sharing::before {
   opacity: 1;
 }
-.task-compact-item.file-missing {
-  border-color: var(--m3-error-container-bg);
-}
 .task-compact-item:hover {
   border-color: var(--task-item-hover-border);
 }
@@ -248,7 +240,7 @@ onBeforeUnmount(() => {
 }
 .task-compact-item.pressed {
   transform: scale(0.98);
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
   transition:
     transform 0.15s cubic-bezier(0.2, 0, 0, 1),
     border-color 0.15s;

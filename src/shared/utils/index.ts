@@ -3,7 +3,6 @@
 export * from './format'
 export * from './peer'
 export * from './task'
-export * from './taskIdentity'
 export * from './file'
 export * from './config'
 export * from './resource'

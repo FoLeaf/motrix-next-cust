@@ -6,6 +6,7 @@ import {
   buildTaskDetailKind,
   buildTaskTransferSummary,
   buildUriDetailSummary,
+  getTaskDetailStatusLabelKey,
 } from '../useTaskDetailSummary'
 
 function makeTask(overrides: Partial<Aria2Task> = {}): Aria2Task {
@@ -44,6 +45,22 @@ describe('buildTaskDetailKind', () => {
 
   it('classifies HTTP, FTP, Thunder-decoded, and other URI tasks as uri when no protocol metadata exists', () => {
     expect(buildTaskDetailKind(makeTask())).toBe('uri')
+  })
+})
+
+describe('getTaskDetailStatusLabelKey', () => {
+  it.each([
+    ['active', 'task.status-active'],
+    ['waiting', 'task.status-waiting'],
+    ['paused', 'task.status-paused'],
+    ['complete', 'task.status-complete'],
+    ['error', 'task.status-error'],
+    ['removed', 'task.status-removed'],
+    ['seeding', 'task.seeding'],
+    ['sharing', 'task.sharing'],
+    ['bt-metadata-fetching', 'task.bt-metadata-fetching'],
+  ])('maps %s to %s', (status, expected) => {
+    expect(getTaskDetailStatusLabelKey(status)).toBe(expected)
   })
 })
 

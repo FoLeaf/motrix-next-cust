@@ -799,10 +799,6 @@ mod tests {
             status: status.to_string(),
             total_length: "1024".to_string(),
             completed_length: "1024".to_string(),
-            upload_length: "0".to_string(),
-            download_speed: "0".to_string(),
-            upload_speed: "0".to_string(),
-            connections: "0".to_string(),
             dir: "/tmp".to_string(),
             files: vec![Aria2File {
                 index: "1".to_string(),
@@ -812,21 +808,7 @@ mod tests {
                 selected: "true".to_string(),
                 uris: vec![],
             }],
-            bittorrent: None,
-            ed2k: None,
-            info_hash: None,
-            seeder: None,
-            num_seeders: None,
-            num_pieces: None,
-            piece_length: None,
-            error_code: None,
-            error_message: None,
-            bitfield: None,
-            verified_length: None,
-            verify_integrity_pending: None,
-            followed_by: None,
-            following: None,
-            belongs_to: None,
+            ..Aria2Task::default()
         }
     }
 
@@ -838,9 +820,7 @@ mod tests {
             }),
             announce_list: Some(vec![vec!["udp://tracker.example.com:6969".to_string()]]),
             magnet_link: Some("magnet:?xt=urn:btih:abcdef1234567890&dn=Ubuntu.iso".to_string()),
-            creation_date: None,
-            comment: None,
-            mode: None,
+            ..Aria2BtInfo::default()
         });
         task.info_hash = Some("abcdef1234567890".to_string());
         task.seeder = Some(if seeder { "true" } else { "false" }.to_string());
@@ -863,26 +843,7 @@ mod tests {
             name: Some("ed2k.bin".to_string()),
             length: Some("1024".to_string()),
             completed_length: Some("1024".to_string()),
-            part_hash_count: None,
-            aich_root: None,
-            server_count: None,
-            connected_server_count: None,
-            peer_count: None,
-            queued_peer_count: None,
-            accepted_peer_count: None,
-            dead_peer_count: None,
-            low_id_peer_count: None,
-            callback_waiting_peer_count: None,
-            kad_node_count: None,
-            kad_router_count: None,
-            kad_firewalled: None,
-            kad_observed_address_count: None,
-            search_active: None,
-            search_more_results: None,
-            search_result_count: None,
-            uploading_peer_count: None,
-            waiting_upload_peer_count: None,
-            peer_credit_count: None,
+            ..Aria2Ed2kInfo::default()
         });
         task.seeder = Some(if sharing { "true" } else { "false" }.to_string());
         task
@@ -897,10 +858,6 @@ mod tests {
             status: "active".to_string(),
             total_length: "2048".to_string(),
             completed_length: "2048".to_string(),
-            upload_length: "0".to_string(),
-            download_speed: "0".to_string(),
-            upload_speed: "0".to_string(),
-            connections: "0".to_string(),
             dir: "/downloads".to_string(),
             files: vec![
                 Aria2File {
@@ -929,24 +886,12 @@ mod tests {
                     vec!["udp://tracker2.example.com:6969".to_string()],
                 ]),
                 magnet_link: Some("magnet:?xt=urn:btih:deadbeef&dn=MyTorrent".to_string()),
-                creation_date: None,
-                comment: None,
                 mode: Some("multi".to_string()),
+                ..Aria2BtInfo::default()
             }),
-            ed2k: None,
             info_hash: Some("deadbeef".repeat(5)),
             seeder: Some("true".to_string()),
-            num_seeders: None,
-            num_pieces: None,
-            piece_length: None,
-            error_code: None,
-            error_message: None,
-            bitfield: None,
-            verified_length: None,
-            verify_integrity_pending: None,
-            followed_by: None,
-            following: None,
-            belongs_to: None,
+            ..Aria2Task::default()
         }
     }
 
@@ -959,14 +904,7 @@ mod tests {
 
     fn make_metadata_task(gid: &str) -> Aria2Task {
         let mut task = make_task(gid, "complete");
-        task.bittorrent = Some(Aria2BtInfo {
-            info: None,
-            announce_list: None,
-            magnet_link: None,
-            creation_date: None,
-            comment: None,
-            mode: None,
-        });
+        task.bittorrent = Some(Aria2BtInfo::default());
         task.info_hash = Some("abcdef1234567890abcdef1234567890abcdef12".to_string());
         task
     }

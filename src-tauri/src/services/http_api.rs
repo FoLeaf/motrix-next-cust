@@ -473,11 +473,18 @@ async fn handle_resume_all(
         }
     };
 
-    match aria2.0.unpause_all().await {
-        Ok(_) => Ok(Json(ActionResponse {
-            status: "ok".to_string(),
-            error: None,
-        })),
+    match aria2.0.resume_eligible().await {
+        Ok(result) => {
+            log::info!(
+                "http_api: POST /resume-all resumed={} blocked={}",
+                result.resumed,
+                result.blocked
+            );
+            Ok(Json(ActionResponse {
+                status: "ok".to_string(),
+                error: None,
+            }))
+        }
         Err(e) => Ok(Json(ActionResponse {
             status: "error".to_string(),
             error: Some(e.to_string()),

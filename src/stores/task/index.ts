@@ -504,11 +504,9 @@ export const useTaskStore = defineStore('task', () => {
 
   async function batchResumeSelectedTasks() {
     const selected = new Set(selectedGidList.value)
-    const gids = taskList.value
-      .filter((task) => selected.has(task.gid) && task.status === TASK_STATUS.PAUSED)
-      .map((task) => task.gid)
-    if (gids.length === 0) return
-    return api.batchResumeTask({ gids })
+    const tasks = taskList.value.filter((task) => selected.has(task.gid) && task.status === TASK_STATUS.PAUSED)
+    if (tasks.length === 0) return { resumed: 0, blocked: 0 }
+    return taskOps.resumeTasks(tasks)
   }
 
   async function batchPauseSelectedTasks() {
@@ -584,6 +582,8 @@ export const useTaskStore = defineStore('task', () => {
       taskOps.cancelMagnetSelectionDownload(target),
     pauseTask: (task: Aria2Task) => taskOps.pauseTask(task),
     resumeTask: (task: Aria2Task) => taskOps.resumeTask(task),
+    applyMagnetFileSelection: (task: Aria2Task, selectFile: string) =>
+      taskOps.applyMagnetFileSelection(task, selectFile),
     pauseAllTask: () => taskOps.pauseAllTask(),
     resumeAllTask: () => taskOps.resumeAllTask(),
     toggleTask: (task: Aria2Task) => taskOps.toggleTask(task),

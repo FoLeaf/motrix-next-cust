@@ -21,7 +21,7 @@ import {
   getDownloadProxy,
 } from '@/composables/useAddTaskSubmit'
 import type { AddTaskForm, ManualUriSubmitResult } from '@/composables/useAddTaskSubmit'
-import { isValidAria2ProxyUrl } from '@shared/utils/aria2Proxy'
+import { isValidAria2ProxyUrl } from '@shared/utils/proxy'
 import { handleTaskStart } from '@/composables/useTaskNotifyHandlers'
 import { isMagnetUri } from '@/composables/useMagnetFlow'
 import { open as openDialog } from '@tauri-apps/plugin-dialog'
@@ -32,7 +32,7 @@ import {
   getDefaultTaskProxyPassword,
   getDefaultTaskProxyServer,
   getDefaultTaskProxyUsername,
-} from '@shared/utils/proxyPolicy'
+} from '@shared/utils/proxy'
 import { resolveUserVisibleDownloadDir } from '@shared/utils/userVisibleDirectory'
 import { findMatchingUserAgentRule, resolveUserAgent } from '@shared/utils/userAgentPolicy'
 
@@ -671,15 +671,6 @@ async function handleSubmit() {
     submitting.value = false
   }
 }
-
-function kindTagType(kind: string): 'info' | 'success' | 'warning' {
-  switch (kind) {
-    case 'torrent':
-      return 'info'
-    default:
-      return 'warning'
-  }
-}
 </script>
 
 <template>
@@ -747,7 +738,9 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
                     <div class="batch-item-main">
                       <NEllipsis :style="{ maxWidth: '400px', flex: 1 }">{{ item.displayName }}</NEllipsis>
                       <NSpace :size="4" align="center" :wrap="false">
-                        <NTag :type="kindTagType(item.kind)" size="small" :bordered="false"> Torrent </NTag>
+                        <NTag type="info" size="small" :bordered="false">
+                          {{ t('task.torrent-task') }}
+                        </NTag>
                         <NButton quaternary size="tiny" @click.stop="removeBatchItem(item)">✕</NButton>
                       </NSpace>
                     </div>
@@ -896,14 +889,14 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
   margin-bottom: 12px;
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid var(--n-border-color, var(--m3-outline-variant));
-  background: var(--n-color, var(--m3-surface-container-low));
+  border: 1px solid var(--m3-outline-variant);
+  background: var(--m3-surface-container-low);
 }
 
 /* ── Batch list ───────────────────────────────────────────────────── */
 .batch-list {
   border-radius: 6px;
-  border: 1px solid var(--n-border-color, var(--m3-outline-variant));
+  border: 1px solid var(--m3-outline-variant);
   overflow: hidden;
 }
 
@@ -921,7 +914,7 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
   transition: border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 .torrent-upload-zone:hover {
-  border-color: var(--color-primary);
+  border-color: var(--m3-primary);
 }
 .torrent-upload-text {
   font-size: 13px;
@@ -957,7 +950,7 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
   padding: 8px 12px;
   margin-top: 6px;
   border-radius: var(--border-radius);
-  background: var(--m3-error-container-bg);
+  background: var(--m3-error-container);
   opacity: 0;
   transition: opacity 0.25s cubic-bezier(0.2, 0, 0, 1);
 }
@@ -966,7 +959,7 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
 }
 .split-limit-text {
   font-size: var(--font-size-sm);
-  color: var(--m3-error);
+  color: var(--m3-on-error-container);
   flex: 1;
 }
 </style>
@@ -980,13 +973,13 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
   transition: background-color 0.15s;
 }
 .batch-item:hover {
-  background: var(--n-color-hover, var(--m3-surface-container-high));
+  background: var(--m3-surface-container-high);
 }
 .batch-item-selected {
-  background: var(--n-color-hover, var(--m3-surface-container-highest));
+  background: var(--m3-surface-container-highest);
 }
 .batch-item + .batch-item {
-  border-top: 1px solid var(--n-border-color, var(--m3-outline-variant));
+  border-top: 1px solid var(--m3-outline-variant);
 }
 .batch-item-main {
   display: flex;
@@ -1020,8 +1013,8 @@ function kindTagType(kind: string): 'info' | 'success' | 'warning' {
   overflow: hidden;
 }
 .category-hint-text {
-  font-size: var(--font-size-sm, 12px);
-  color: var(--n-text-color-3, #999);
+  font-size: var(--font-size-sm);
+  color: var(--n-text-color-3);
   margin-top: 4px;
   padding-left: 2px;
 }

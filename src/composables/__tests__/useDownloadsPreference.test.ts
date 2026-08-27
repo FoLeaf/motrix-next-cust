@@ -197,7 +197,7 @@ describe('buildDownloadsForm', () => {
 
   // ── Completeness ────────────────────────────────────────────────
 
-  it('returns all 26 form fields', () => {
+  it('returns every form field', () => {
     const form = buildDownloadsForm(emptyConfig)
     const expectedFields = [
       'dir',
@@ -218,6 +218,7 @@ describe('buildDownloadsForm', () => {
       'speedScheduleDays',
       'newTaskShowDownloading',
       'noConfirmBeforeDeleteTask',
+      'fileDeletionMode',
       'deleteFilesWhenSkipConfirm',
       'taskNotification',
       'notifyOnStart',
@@ -258,6 +259,7 @@ describe('buildDownloadsSystemConfig', () => {
     speedScheduleDays: 0,
     newTaskShowDownloading: true,
     noConfirmBeforeDeleteTask: false,
+    fileDeletionMode: 'trash',
     deleteFilesWhenSkipConfirm: false,
     taskNotification: true,
     notifyOnStart: true,
@@ -384,6 +386,7 @@ describe('transformDownloadsForStore', () => {
     speedScheduleDays: 0,
     newTaskShowDownloading: true,
     noConfirmBeforeDeleteTask: false,
+    fileDeletionMode: 'trash',
     deleteFilesWhenSkipConfirm: false,
     taskNotification: true,
     notifyOnStart: true,

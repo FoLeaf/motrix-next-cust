@@ -296,7 +296,7 @@ export function useAppEvents(deps: AppEventsDeps): AppEventsReturn {
           if (item.kind === 'ed2kUdp') patch.ed2kUdpListenPort = item.newPort
         }
         preferenceStore.updatePreference?.(patch)
-        message.success(t('preferences.port-auto-switched', { ports }))
+        message.info(t('preferences.port-auto-switched', { ports }))
       }),
     )
 

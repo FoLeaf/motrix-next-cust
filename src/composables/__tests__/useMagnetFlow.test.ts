@@ -16,7 +16,6 @@ const {
   buildSelectFileOption,
   parseFilesForSelection,
   shouldShowFileSelection,
-  buildStatusAwareConfirmAction,
   getResolvedMagnetSelection,
   getPendingMagnetSelectionGids,
 } = await import('@/composables/useMagnetFlow')
@@ -179,45 +178,6 @@ describe('useMagnetFlow', () => {
 
     it('returns true when config object has no pauseMetadata key', () => {
       expect(shouldShowFileSelection({})).toBe(true)
-    })
-  })
-
-  // ── buildStatusAwareConfirmAction ──────────────────────────────────
-
-  describe('buildStatusAwareConfirmAction', () => {
-    it('returns resume-only for a paused task (standard pause-metadata flow)', () => {
-      const action = buildStatusAwareConfirmAction('paused')
-      expect(action).toEqual({ needsResume: true })
-    })
-
-    it('returns no-op for an active task (engine should have paused metadata follow-up)', () => {
-      const action = buildStatusAwareConfirmAction('active')
-      expect(action).toEqual({ needsResume: false })
-    })
-
-    it('returns no-op for a queued waiting task', () => {
-      const action = buildStatusAwareConfirmAction('waiting')
-      expect(action).toEqual({ needsResume: false })
-    })
-
-    it('returns no-op for a complete task', () => {
-      const action = buildStatusAwareConfirmAction('complete')
-      expect(action).toEqual({ needsResume: false })
-    })
-
-    it('returns no-op for a removed task', () => {
-      const action = buildStatusAwareConfirmAction('removed')
-      expect(action).toEqual({ needsResume: false })
-    })
-
-    it('returns no-op for an error task', () => {
-      const action = buildStatusAwareConfirmAction('error')
-      expect(action).toEqual({ needsResume: false })
-    })
-
-    it('returns resume-only for undefined status (safe fallback)', () => {
-      const action = buildStatusAwareConfirmAction(undefined)
-      expect(action).toEqual({ needsResume: true })
     })
   })
 

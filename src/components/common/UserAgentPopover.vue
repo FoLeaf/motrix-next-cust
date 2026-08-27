@@ -129,26 +129,26 @@ function selectProfile(profile: UserAgentProfile) {
 }
 .ua-popover-heading {
   padding: 4px 8px 2px;
-  color: var(--n-text-color-3, #999);
-  font-size: var(--font-size-sm, 12px);
+  color: var(--n-text-color-3);
+  font-size: var(--font-size-sm);
   font-weight: 600;
 }
 .ua-popover-heading--spaced {
   margin-top: 6px;
   padding-top: 8px;
-  border-top: 1px solid var(--n-border-color, var(--m3-outline-variant));
+  border-top: 1px solid var(--m3-outline-variant);
 }
 .ua-popover-item {
   display: flex;
   align-items: center;
   min-height: 32px;
   padding: 5px 8px;
-  border-radius: var(--border-radius, 6px);
+  border-radius: var(--border-radius);
   cursor: pointer;
   transition: background-color 0.15s;
 }
 .ua-popover-item:hover {
-  background: var(--n-color-hover, var(--m3-surface-container-high));
+  background: var(--m3-surface-container-high);
 }
 .ua-popover-label {
   min-width: 0;

@@ -21,6 +21,9 @@ pub struct UpdateMetadata {
     pub date: Option<String>,
     pub channel: String,
     pub requested_channel: String,
+    /// True when the offered version is lower than the running version
+    /// (cross-channel switch, e.g. beta -> stable).
+    pub is_rollback: bool,
 }
 
 /// Outcome of a download_update command.
@@ -227,6 +230,15 @@ fn is_strict_semver_upgrade(current: &str, target: &str) -> bool {
     }
 }
 
+/// True when the offered version is strictly lower than the running one.
+/// Unparseable versions are never flagged as rollbacks.
+fn is_semver_rollback(current: &str, target: &str) -> bool {
+    match (parse_semver(current), parse_semver(target)) {
+        (Some(current), Some(target)) => target < current,
+        _ => false,
+    }
+}
+
 fn select_latest_candidate(
     current_version: &str,
     candidates: Vec<CandidateVersion>,
@@ -394,6 +406,7 @@ pub async fn check_for_update(
                 selected.requested_policy.as_str()
             );
             Some(UpdateMetadata {
+                is_rollback: is_semver_rollback(&u.current_version, &u.version),
                 version: u.version.clone(),
                 body: u.body.clone(),
                 date: u.date.map(|d| d.to_string()),
@@ -736,6 +749,17 @@ mod tests {
     #[test]
     fn unknown_policy_falls_back_to_stable() {
         assert_eq!(UpdatePolicy::from_input("nightly"), UpdatePolicy::Stable);
+    }
+
+    #[test]
+    fn semver_rollback_detects_downgrades_only() {
+        assert!(is_semver_rollback("2.0.0", "1.9.9"));
+        assert!(is_semver_rollback("2.0.0", "2.0.0-beta.1"));
+        assert!(!is_semver_rollback("1.0.0", "2.0.0"));
+        assert!(!is_semver_rollback("2.0.0", "2.0.0"));
+        // Unparseable versions are never flagged as rollbacks.
+        assert!(!is_semver_rollback("", "1.0.0"));
+        assert!(!is_semver_rollback("2.0.0", "not-a-version"));
     }
 
     #[test]

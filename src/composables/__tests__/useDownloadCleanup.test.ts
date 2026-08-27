@@ -5,8 +5,7 @@ const mockCheckPathExists = vi.fn()
 const mockRemove = vi.fn()
 const mockReadDir = vi.fn()
 const mockReadFile = vi.fn()
-const mockTrashFile = vi.fn()
-const mockRemoveFile = vi.fn()
+const mockDeletePath = vi.fn()
 
 vi.mock('@tauri-apps/plugin-fs', () => ({
   remove: (...args: unknown[]) => mockRemove(...args),
@@ -23,8 +22,7 @@ vi.mock('@tauri-apps/api/path', () => ({
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: async (cmd: string, args?: Record<string, unknown>) => {
     if (cmd === 'check_path_exists') return mockCheckPathExists(args)
-    if (cmd === 'trash_file') return mockTrashFile(args)
-    if (cmd === 'remove_file') return mockRemoveFile(args)
+    if (cmd === 'delete_path') return mockDeletePath(args)
     if (cmd === 'read_local_file') return mockReadFile(args?.path)
     if (cmd === 'list_dir_files') {
       const entries = await mockReadDir(args)
@@ -122,25 +120,22 @@ describe('useDownloadCleanup', () => {
 
   describe('trashTorrentFile', () => {
     it('trashes a torrent file that exists', async () => {
-      mockCheckPathExists.mockResolvedValue(true)
-      mockTrashFile.mockResolvedValue(undefined)
+      mockDeletePath.mockResolvedValue(true)
 
       const result = await trashTorrentFile('/downloads/movie.torrent')
       expect(result).toBe(true)
-      expect(mockTrashFile).toHaveBeenCalledWith({ path: '/downloads/movie.torrent' })
+      expect(mockDeletePath).toHaveBeenCalledWith({ path: '/downloads/movie.torrent', mode: 'trash' })
     })
 
     it('returns false when file does not exist', async () => {
-      mockCheckPathExists.mockResolvedValue(false)
+      mockDeletePath.mockResolvedValue(false)
 
       const result = await trashTorrentFile('/downloads/gone.torrent')
       expect(result).toBe(false)
-      expect(mockTrashFile).not.toHaveBeenCalled()
     })
 
     it('returns false on error and does not throw', async () => {
-      mockCheckPathExists.mockResolvedValue(true)
-      mockTrashFile.mockRejectedValue(new Error('perm denied'))
+      mockDeletePath.mockRejectedValue(new Error('perm denied'))
 
       const result = await trashTorrentFile('/downloads/locked.torrent')
       expect(result).toBe(false)
@@ -188,7 +183,7 @@ describe('useDownloadCleanup', () => {
 
       const result = await cleanupAria2MetadataFiles('/dl', 'deadbeef')
       expect(result).toBe(false)
-      expect(mockTrashFile).not.toHaveBeenCalled()
+      expect(mockDeletePath).not.toHaveBeenCalled()
     })
 
     it('ignores user-named .torrent files (non-hex40 names)', async () => {
@@ -197,7 +192,7 @@ describe('useDownloadCleanup', () => {
       const result = await cleanupAria2MetadataFiles('/dl', 'deadbeef')
       expect(result).toBe(false)
       expect(mockRemove).not.toHaveBeenCalled()
-      expect(mockTrashFile).not.toHaveBeenCalled()
+      expect(mockDeletePath).not.toHaveBeenCalled()
     })
 
     it('ignores directories even if named like hex40.torrent', async () => {
@@ -220,13 +215,12 @@ describe('useDownloadCleanup', () => {
       // The simplest approach: the function takes a hashExtractor callback for testability.
       // This is consistent with the DI pattern used throughout the codebase.
       const extractor = vi.fn().mockResolvedValue('e2345c99159456342ce6f4ec830ec08fc2e9fc7f')
-      mockCheckPathExists.mockResolvedValue(true)
-      mockRemoveFile.mockResolvedValue(undefined)
+      mockDeletePath.mockResolvedValue(true)
 
       const result = await cleanupAria2MetadataFiles('/dl', 'e2345c99159456342ce6f4ec830ec08fc2e9fc7f', extractor)
       expect(result).toBe(true)
       expect(extractor).toHaveBeenCalledWith('/dl/' + hexName + '.torrent')
-      expect(mockRemoveFile).toHaveBeenCalledWith({ path: '/dl/' + hexName + '.torrent' })
+      expect(mockDeletePath).toHaveBeenCalledWith({ path: '/dl/' + hexName + '.torrent', mode: 'permanent' })
     })
 
     it('skips .torrent files whose infoHash does not match', async () => {
@@ -238,7 +232,7 @@ describe('useDownloadCleanup', () => {
 
       const result = await cleanupAria2MetadataFiles('/dl', 'e2345c99159456342ce6f4ec830ec08fc2e9fc7f', extractor)
       expect(result).toBe(false)
-      expect(mockRemoveFile).not.toHaveBeenCalled()
+      expect(mockDeletePath).not.toHaveBeenCalled()
     })
 
     it('handles multiple candidates and deletes only the match', async () => {
@@ -258,15 +252,14 @@ describe('useDownloadCleanup', () => {
         .mockResolvedValueOnce(targetHash) // match on second file
         .mockResolvedValueOnce('wrong_hash_3')
 
-      mockCheckPathExists.mockResolvedValue(true)
-      mockRemoveFile.mockResolvedValue(undefined)
+      mockDeletePath.mockResolvedValue(true)
 
       const result = await cleanupAria2MetadataFiles('/dl', targetHash, extractor)
       expect(result).toBe(true)
       // Should have stopped after finding the match (second file)
       expect(extractor).toHaveBeenCalledTimes(2)
-      expect(mockRemoveFile).toHaveBeenCalledTimes(1)
-      expect(mockRemoveFile).toHaveBeenCalledWith({ path: '/dl/' + hex2 + '.torrent' })
+      expect(mockDeletePath).toHaveBeenCalledTimes(1)
+      expect(mockDeletePath).toHaveBeenCalledWith({ path: '/dl/' + hex2 + '.torrent', mode: 'permanent' })
     })
 
     it('survives readDir failure gracefully', async () => {
@@ -287,12 +280,11 @@ describe('useDownloadCleanup', () => {
         .mockRejectedValueOnce(new Error('parse failed')) // first file fails
         .mockResolvedValueOnce(targetHash) // second file matches
 
-      mockCheckPathExists.mockResolvedValue(true)
-      mockRemoveFile.mockResolvedValue(undefined)
+      mockDeletePath.mockResolvedValue(true)
 
       const result = await cleanupAria2MetadataFiles('/dl', targetHash, extractor)
       expect(result).toBe(true)
-      expect(mockRemoveFile).toHaveBeenCalledWith({ path: '/dl/' + hex2 + '.torrent' })
+      expect(mockDeletePath).toHaveBeenCalledWith({ path: '/dl/' + hex2 + '.torrent', mode: 'permanent' })
     })
 
     it('survives remove failure gracefully', async () => {
@@ -300,8 +292,7 @@ describe('useDownloadCleanup', () => {
       mockReadDir.mockResolvedValue([fileEntry(hexName + '.torrent')])
 
       const extractor = vi.fn().mockResolvedValue('target')
-      mockCheckPathExists.mockResolvedValue(true)
-      mockRemoveFile.mockRejectedValue(new Error('perm denied'))
+      mockDeletePath.mockRejectedValue(new Error('perm denied'))
 
       const result = await cleanupAria2MetadataFiles('/dl', 'target', extractor)
       expect(result).toBe(false)
@@ -317,8 +308,7 @@ describe('useDownloadCleanup', () => {
       ])
 
       const extractor = vi.fn().mockResolvedValue('matchhash')
-      mockCheckPathExists.mockResolvedValue(true)
-      mockRemoveFile.mockResolvedValue(undefined)
+      mockDeletePath.mockResolvedValue(true)
 
       const result = await cleanupAria2MetadataFiles('/dl', 'matchhash', extractor)
       expect(result).toBe(true)
@@ -332,19 +322,17 @@ describe('useDownloadCleanup', () => {
 
     beforeEach(() => {
       vi.clearAllMocks()
-      mockCheckPathExists.mockResolvedValue(true)
-      mockRemoveFile.mockResolvedValue(undefined)
+      mockDeletePath.mockResolvedValue(true)
     })
 
-    it('uses removePath (remove_file) instead of trashPath for hex40 .torrent', async () => {
+    it('permanently deletes hex40 torrent metadata', async () => {
       const hexName = 'abcdef1234567890abcdef1234567890abcdef12'
       mockReadDir.mockResolvedValue([fileEntry(hexName + '.torrent')])
       const extractor = vi.fn().mockResolvedValue('target_hash')
 
       await cleanupAria2MetadataFiles('/dl', 'target_hash', extractor)
 
-      expect(mockRemoveFile).toHaveBeenCalledWith({ path: '/dl/' + hexName + '.torrent' })
-      expect(mockTrashFile).not.toHaveBeenCalled()
+      expect(mockDeletePath).toHaveBeenCalledWith({ path: '/dl/' + hexName + '.torrent', mode: 'permanent' })
     })
 
     it('ignores hex40 .meta4 files', async () => {
@@ -355,8 +343,8 @@ describe('useDownloadCleanup', () => {
 
       await cleanupAria2MetadataFiles('/dl', 'target_hash', extractor)
 
-      expect(mockRemoveFile).not.toHaveBeenCalledWith({ path: '/dl/' + hex1 + '.meta4' })
-      expect(mockRemoveFile).toHaveBeenCalledWith({ path: '/dl/' + hex2 + '.torrent' })
+      expect(mockDeletePath).not.toHaveBeenCalledWith({ path: '/dl/' + hex1 + '.meta4', mode: 'permanent' })
+      expect(mockDeletePath).toHaveBeenCalledWith({ path: '/dl/' + hex2 + '.torrent', mode: 'permanent' })
     })
 
     it('returns false for empty dir or infoHash', async () => {

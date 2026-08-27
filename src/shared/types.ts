@@ -3,6 +3,10 @@
 /** Task lifecycle status as reported by aria2 RPC. */
 export type TaskStatus = 'active' | 'waiting' | 'paused' | 'error' | 'complete' | 'removed'
 
+export type AppLogLevel = 'error' | 'warn' | 'info' | 'debug'
+export type Aria2LogLevel = AppLogLevel | 'trace'
+export type FileDeletionMode = 'trash' | 'permanent'
+
 /** URI entry within an aria2 file descriptor. */
 export interface Aria2FileUri {
   uri: string
@@ -163,7 +167,7 @@ export interface Aria2RawGlobalStat {
 
 /** HTTP proxy configuration for download tasks and scoped app requests. */
 export interface ProxyConfig {
-  mode?: import('@shared/utils/proxyPolicy').EngineProxyMode
+  mode?: import('@shared/utils/proxy').EngineProxyMode
   server: string
   username?: string
   password?: string
@@ -311,11 +315,16 @@ export interface AppConfig {
   lightweightMode: boolean
   btTrackerAutoSync: boolean
   btTrackerSyncIntervalHours: number
+  btPeerBlocklistEnabled: boolean
+  btPeerBlocklistUrl: string
+  btPeerBlocklistAutoSync: boolean
+  btPeerBlocklistSyncIntervalHours: number
   keepSharing: boolean
   keepWindowState: boolean
 
   newTaskShowDownloading: boolean
   noConfirmBeforeDeleteTask: boolean
+  fileDeletionMode: FileDeletionMode
   deleteFilesWhenSkipConfirm: boolean
   resumeAllWhenAppLaunched: boolean
   taskNotification: boolean
@@ -326,8 +335,8 @@ export interface AppConfig {
   showProgressBar: boolean
   traySpeedometer: boolean
   dockBadgeSpeed: boolean
-  logLevel: string
-  aria2LogLevel: string
+  logLevel: AppLogLevel
+  aria2LogLevel: Aria2LogLevel
   engineBinPath: string
   /** Directory for internal temporary engine files. Empty means the OS temporary directory. */
   tempFilesDir: string
@@ -372,6 +381,8 @@ export interface AppConfig {
   autoChangeConflictingPorts: boolean
   portConflictRecovery: PortConflictRecoveryConfig
   listenPort: number
+  btExternalIp: string
+  btExternalPort: number
   dhtListenPort: number
   ed2kListenPort: number
   ed2kUdpListenPort: number
@@ -499,6 +510,8 @@ export interface TauriUpdate {
   date: string | null
   channel: ResolvedUpdateChannel
   requestedChannel: UpdateChannel
+  /** Computed by Rust via the semver crate — true for cross-channel downgrades. */
+  isRollback: boolean
 }
 
 // ── Batch Add Task ──────────────────────────────────────────────────
@@ -610,9 +623,6 @@ export interface TaskApi {
   forcePauseTask: (params: { gid: string }) => Promise<string>
   pauseTask: (params: { gid: string }) => Promise<string>
   resumeTask: (params: { gid: string }) => Promise<string>
-  pauseAllTask: () => Promise<string>
-  forcePauseAllTask: () => Promise<string>
-  resumeAllTask: () => Promise<string>
   batchResumeTask: (params: { gids: string[] }) => Promise<unknown[][]>
   batchPauseTask: (params: { gids: string[] }) => Promise<unknown[][]>
   batchForcePauseTask: (params: { gids: string[] }) => Promise<unknown[][]>

@@ -1,6 +1,25 @@
 /** @fileoverview Tests for tracker data conversion utilities. */
 import { describe, it, expect } from 'vitest'
+import { DEFAULT_TRACKER_SOURCE, TRACKER_SOURCE_OPTIONS } from '@shared/constants'
 import { convertTrackerDataToLine, convertTrackerDataToComma, reduceTrackerString } from '../tracker'
+
+describe('tracker source defaults', () => {
+  it('uses only the two official curated sources', () => {
+    expect(TRACKER_SOURCE_OPTIONS).toEqual([
+      {
+        owner: 'ngosang',
+        repository: 'trackerslist',
+        value: 'https://ngosang.github.io/trackerslist/trackers_best.txt',
+      },
+      {
+        owner: 'XIU2',
+        repository: 'TrackersListCollection',
+        value: 'https://cf.trackerslist.com/best.txt',
+      },
+    ])
+    expect(DEFAULT_TRACKER_SOURCE).toEqual(TRACKER_SOURCE_OPTIONS.map((source) => source.value))
+  })
+})
 
 // ─── convertTrackerDataToLine ───────────────────────────────
 
@@ -19,6 +38,10 @@ describe('convertTrackerDataToLine', () => {
 
   it('strips whitespace-only entries', () => {
     expect(convertTrackerDataToLine(['a', '   ', 'b'])).toBe('a\r\nb')
+  })
+
+  it('trims tracker URLs before deduplication', () => {
+    expect(convertTrackerDataToLine([' udp://tracker.example ', 'udp://tracker.example'])).toBe('udp://tracker.example')
   })
 
   it('returns single entry without separator', () => {

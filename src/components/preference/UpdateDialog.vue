@@ -29,7 +29,6 @@ import {
   getActionTarget,
   resolvePhaseAfterDownload,
   shouldAllowUpdateDialogClose,
-  isUpdateRollback,
   calcProgressPercent,
   bytesToMB,
   getUpdateProxy as resolveProxy,
@@ -43,6 +42,8 @@ interface UpdateMetadata {
   date: string | null
   channel: ResolvedUpdateChannel
   requestedChannel: UpdateChannel
+  /** Computed by Rust via the semver crate — true for cross-channel downgrades. */
+  isRollback: boolean
 }
 
 interface UpdateProgressStarted {
@@ -96,8 +97,8 @@ const channelTagType = computed(() => {
 
 const progressPercent = computed(() => calcProgressPercent(downloadReceived.value, downloadTotal.value))
 
-// ── Version direction detection ──────────────────────────────────────
-const isRollback = computed(() => isUpdateRollback(currentVersion.value, version.value))
+// ── Version direction detection (authoritative comparison done in Rust) ──
+const isRollback = ref(false)
 
 // ── Action button state machine ──────────────────────────────────────
 const actionDisabled = computed(() => isActionDisabled(phase.value))
@@ -143,6 +144,7 @@ async function open(channel?: string) {
       releaseNotes.value = update.body || ''
       activeChannel.value = update.channel
       requestedChannel.value = update.requestedChannel
+      isRollback.value = update.isRollback
       phase.value = 'available'
       logger.info(
         'Updater',
@@ -366,7 +368,7 @@ defineExpose({ open })
 <style scoped>
 .update-dialog {
   width: 460px;
-  background: var(--n-color, var(--m3-surface-container-high));
+  background: var(--m3-surface-container-high);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 12px 40px var(--m3-shadow);
@@ -381,12 +383,12 @@ defineExpose({ open })
 .update-dialog-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--n-text-color, var(--m3-on-surface));
+  color: var(--m3-on-surface);
 }
 .update-dialog-close {
   background: none;
   border: none;
-  color: var(--n-text-color, var(--m3-outline));
+  color: var(--m3-outline);
   font-size: 20px;
   cursor: pointer;
   padding: 0 4px;
@@ -468,12 +470,12 @@ defineExpose({ open })
   color: var(--m3-success);
 }
 .update-icon-new {
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-  color: var(--color-primary);
+  background: color-mix(in srgb, var(--m3-primary) 12%, transparent);
+  color: var(--m3-primary);
 }
 .update-icon-warn {
-  background: color-mix(in srgb, var(--m3-error) 10%, transparent);
-  color: var(--m3-tertiary);
+  background: var(--m3-warning-container);
+  color: var(--m3-on-warning-container);
 }
 .update-icon-error {
   background: color-mix(in srgb, var(--m3-error) 12%, transparent);
@@ -507,13 +509,13 @@ defineExpose({ open })
   font-family: 'SF Mono', 'Fira Code', monospace;
 }
 .version-old {
-  background: color-mix(in srgb, var(--n-text-color, #666) 12%, transparent);
-  color: var(--n-text-color, var(--m3-outline));
+  background: color-mix(in srgb, var(--n-text-color) 12%, transparent);
+  color: var(--m3-outline);
   opacity: 0.7;
 }
 .version-new {
-  background: var(--m3-primary-container-bg);
-  color: var(--color-primary);
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
 }
 .version-arrow {
   font-size: 12px;
@@ -538,7 +540,7 @@ defineExpose({ open })
   font-size: 12.5px;
   line-height: 1.6;
   opacity: 0.65;
-  color: var(--n-text-color, var(--m3-on-surface-variant));
+  color: var(--m3-on-surface-variant);
 }
 .update-notes-text :deep(h2) {
   font-size: 13px;
@@ -587,7 +589,7 @@ defineExpose({ open })
 .update-notes-text :deep(blockquote) {
   margin: 6px 0;
   padding: 6px 12px;
-  border-left: 3px solid color-mix(in srgb, var(--color-primary) 50%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--m3-primary) 50%, transparent);
   background: color-mix(in srgb, var(--m3-on-surface) 4%, transparent);
   border-radius: 0 4px 4px 0;
 }
@@ -620,32 +622,32 @@ defineExpose({ open })
   margin: 2px 0;
 }
 .update-notes-text :deep(.markdown-alert-note) {
-  border-left-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
-  color: var(--color-primary);
+  border-left-color: var(--m3-primary);
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
 }
 .update-notes-text :deep(.markdown-alert-tip) {
   border-left-color: var(--m3-success);
-  background: color-mix(in srgb, var(--m3-success) 6%, transparent);
-  color: var(--m3-success);
+  background: var(--m3-success-container);
+  color: var(--m3-on-success-container);
 }
 .update-notes-text :deep(.markdown-alert-important) {
   border-left-color: var(--m3-tertiary);
-  background: color-mix(in srgb, var(--m3-tertiary) 6%, transparent);
-  color: var(--m3-tertiary);
+  background: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
 }
 .update-notes-text :deep(.markdown-alert-warning) {
-  border-left-color: var(--m3-warning, #d4a04a);
-  background: color-mix(in srgb, var(--m3-warning, #d4a04a) 6%, transparent);
-  color: var(--m3-warning, #d4a04a);
+  border-left-color: var(--m3-warning);
+  background: var(--m3-warning-container);
+  color: var(--m3-on-warning-container);
 }
 .update-notes-text :deep(.markdown-alert-caution) {
   border-left-color: var(--m3-error);
-  background: color-mix(in srgb, var(--m3-error) 6%, transparent);
-  color: var(--m3-error);
+  background: var(--m3-error-container);
+  color: var(--m3-on-error-container);
 }
 .update-notes-text :deep(.markdown-alert p:not(.markdown-alert-title)) {
-  color: var(--n-text-color, var(--m3-on-surface-variant));
+  color: var(--m3-on-surface-variant);
 }
 
 /* ── Horizontal rule ───────────────────────────────────────────────── */
@@ -678,7 +680,7 @@ defineExpose({ open })
 
 /* ── Links ─────────────────────────────────────────────────────────── */
 .update-notes-text :deep(a) {
-  color: var(--color-primary);
+  color: var(--m3-primary);
   text-decoration: none;
 }
 .update-notes-text :deep(a:hover) {
@@ -688,12 +690,13 @@ defineExpose({ open })
 /* ── Emphasis ──────────────────────────────────────────────────────── */
 .update-notes-text :deep(strong) {
   font-weight: 600;
-  color: var(--n-text-color, var(--m3-on-surface));
+  color: var(--m3-on-surface);
 }
 
 .update-error-detail {
   width: 100%;
-  background: var(--m3-error-container-bg);
+  background: var(--m3-error-container);
+  color: var(--m3-on-error-container);
   border-radius: 8px;
   padding: 10px 14px;
   max-height: 72px;

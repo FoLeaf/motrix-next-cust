@@ -4,7 +4,7 @@
  */
 import { join } from '@tauri-apps/api/path'
 import { invoke } from '@tauri-apps/api/core'
-import { removePath } from '@/composables/useFileDelete'
+import { deletePath } from '@/composables/useFileDelete'
 import { logger } from '@shared/logger'
 import { getTorrentInfoHash } from '@shared/utils/torrentMeta'
 
@@ -61,19 +61,13 @@ export async function findStaleRecords(records: StaleCheckItem[]): Promise<strin
   return staleGids
 }
 
-/** Move a torrent source file to the OS trash / recycle bin.
- *  Returns true on success, false if the file doesn't exist or the operation fails. */
 export async function trashTorrentFile(path: string): Promise<boolean> {
   if (!path) return false
 
   try {
-    const fileExists = await invoke<boolean>('check_path_exists', { path })
-    if (!fileExists) return false
-
-    await invoke('trash_file', { path })
-    return true
-  } catch (e) {
-    logger.warn('trashTorrentFile', `Failed to trash ${path}: ${e}`)
+    return await deletePath(path, 'trash')
+  } catch (error) {
+    logger.warn('trashTorrentFile', `Failed to trash ${path}: ${error}`)
     return false
   }
 }
@@ -107,8 +101,7 @@ export type HashExtractor = (filePath: string) => Promise<string | null>
  * `rpc-save-upload-metadata`. We parse each candidate and match by infoHash
  * before removing it.
  *
- * Uses `removePath()` (permanent delete) instead of `trashPath()` because these are
- * internal aria2 engine artifacts — not user content.
+ * Internal aria2 engine artifacts are permanently deleted.
  *
  * Safety guarantees:
  * - Only files matching `/^[0-9a-f]{40}\.torrent$/` are considered (user files safe)
@@ -138,7 +131,7 @@ export async function cleanupAria2MetadataFiles(
       try {
         const hash = await extractHash(filePath)
         if (hash === infoHash) {
-          const removed = await removePath(filePath)
+          const removed = await deletePath(filePath, 'permanent')
           if (removed) logger.debug('cleanupAria2Metadata', `removed ${name}`)
           torrentMatched = removed
           return torrentMatched

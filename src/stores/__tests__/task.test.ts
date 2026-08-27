@@ -76,9 +76,6 @@ function createMockApi() {
     forcePauseTask: vi.fn().mockResolvedValue('gid1'),
     pauseTask: vi.fn().mockResolvedValue('gid1'),
     resumeTask: vi.fn().mockResolvedValue('gid1'),
-    pauseAllTask: vi.fn().mockResolvedValue('OK'),
-    forcePauseAllTask: vi.fn().mockResolvedValue('OK'),
-    resumeAllTask: vi.fn().mockResolvedValue('OK'),
     batchResumeTask: vi.fn().mockResolvedValue([]),
     batchPauseTask: vi.fn().mockResolvedValue([]),
     batchForcePauseTask: vi.fn().mockResolvedValue([]),
@@ -565,7 +562,6 @@ describe('TaskStore', () => {
     await store.pauseAllTask()
     expect(mockApi.forcePauseTask).toHaveBeenCalledWith({ gid: 'gid1' })
     expect(mockApi.forcePauseTask).toHaveBeenCalledWith({ gid: 'gid2' })
-    expect(mockApi.forcePauseAllTask).not.toHaveBeenCalled()
     expect(mockApi.saveSession).toHaveBeenCalled()
   })
 
@@ -581,12 +577,13 @@ describe('TaskStore', () => {
     await store.pauseAllTask()
     expect(mockApi.forcePauseTask).toHaveBeenCalledWith({ gid: 'dl-1' })
     expect(mockApi.forcePauseTask).toHaveBeenCalledTimes(1)
-    expect(mockApi.forcePauseAllTask).not.toHaveBeenCalled()
   })
 
-  it('resumeAllTask calls API, refreshes, and saves session', async () => {
+  it('resumeAllTask resumes eligible paused tasks, refreshes, and saves session', async () => {
+    mockApi.fetchTaskList.mockResolvedValueOnce([makeMockTask('paused-1', 'paused')])
+    await store.fetchList()
     await store.resumeAllTask()
-    expect(mockApi.resumeAllTask).toHaveBeenCalled()
+    expect(mockApi.batchResumeTask).toHaveBeenCalledWith({ gids: ['paused-1'] })
     expect(mockApi.fetchTaskList).toHaveBeenCalled()
     expect(mockApi.saveSession).toHaveBeenCalled()
   })

@@ -272,6 +272,48 @@ fn choose_replacement_port(
     })
 }
 
+pub(crate) fn resolve_bt_listen_port(
+    app: &AppHandle,
+    requested_port: u16,
+) -> Result<u16, AppError> {
+    if requested_port < 1024 {
+        return Err(AppError::Engine(
+            "BitTorrent listen port must be between 1024 and 65535".into(),
+        ));
+    }
+
+    let prefs_store = app
+        .store("config.json")
+        .map_err(|e| AppError::Store(format!("Failed to open config.json: {e}")))?;
+    let prefs = prefs_store.get("preferences").unwrap_or_else(|| json!({}));
+    let current = PortSnapshot::from_preferences(&prefs);
+
+    if requested_port == current.bt {
+        return Ok(requested_port);
+    }
+
+    let policy = recovery_policy_from_preferences(&prefs);
+    let mut reserved = current.all_ports();
+    reserved.remove(&current.bt);
+    if !reserved.contains(&requested_port) && tcp_available(requested_port) {
+        return Ok(requested_port);
+    }
+
+    if !recovery_enabled_for(policy, PortKind::Bt) {
+        return Err(AppError::Engine(format!(
+            "BitTorrent listen port {requested_port} is unavailable"
+        )));
+    }
+
+    let Some(resolved_port) = choose_replacement_port(policy, &reserved, requested_port) else {
+        return Err(AppError::Engine(
+            "No available BitTorrent listen port".into(),
+        ));
+    };
+
+    Ok(resolved_port)
+}
+
 pub(crate) fn reconcile_engine_ports(app: &AppHandle) -> Result<Vec<PortSwitch>, AppError> {
     let prefs_store = app
         .store("config.json")

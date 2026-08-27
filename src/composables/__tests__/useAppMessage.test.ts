@@ -2,7 +2,7 @@
  * @fileoverview Tests for the useAppMessage composable.
  *
  * Key behaviors under test:
- * - All four message types (success, error, warning, info) invoke Naive UI's message API
+ * - All four message types invoke Naive UI's message API
  * - Content is truncated via ellipsis when exceeding TOAST_MAX_LENGTH
  * - Duplicate messages within the dedup window are coalesced (destroy + rescheduled)
  * - Different content strings are tracked independently

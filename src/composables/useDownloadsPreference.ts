@@ -5,7 +5,7 @@
  * notifications/automation, and auto-cleanup. This is the core download
  * experience tab — most fields map to aria2 engine options.
  */
-import type { AppConfig, FileCategory } from '@shared/types'
+import type { AppConfig, FileCategory, FileDeletionMode } from '@shared/types'
 import {
   DEFAULT_APP_CONFIG as D,
   buildDefaultCategories,
@@ -37,6 +37,7 @@ export interface DownloadsForm {
   speedScheduleDays: number
   newTaskShowDownloading: boolean
   noConfirmBeforeDeleteTask: boolean
+  fileDeletionMode: FileDeletionMode
   deleteFilesWhenSkipConfirm: boolean
   taskNotification: boolean
   notifyOnStart: boolean
@@ -105,6 +106,7 @@ export function buildDownloadsForm(config: AppConfig, defaultDir: string = ''): 
     speedScheduleDays: config.speedScheduleDays ?? D.speedScheduleDays,
     newTaskShowDownloading: config.newTaskShowDownloading ?? D.newTaskShowDownloading,
     noConfirmBeforeDeleteTask: config.noConfirmBeforeDeleteTask ?? D.noConfirmBeforeDeleteTask,
+    fileDeletionMode: config.fileDeletionMode ?? D.fileDeletionMode,
     deleteFilesWhenSkipConfirm: config.deleteFilesWhenSkipConfirm ?? D.deleteFilesWhenSkipConfirm,
     taskNotification: config.taskNotification ?? D.taskNotification,
     notifyOnStart: config.notifyOnStart ?? D.notifyOnStart,
