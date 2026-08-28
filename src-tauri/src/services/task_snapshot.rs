@@ -3,7 +3,7 @@
 //! This module intentionally exports a small, sanitized view of aria2 tasks:
 //! no URLs, cookies, headers, RPC tokens, or extension tokens are included.
 
-use crate::aria2::client::Aria2State;
+use crate::aria2::client::{Aria2Client, Aria2State};
 use crate::aria2::types::{Aria2File, Aria2Task};
 use crate::error::AppError;
 use crate::history::{HistoryDbState, HistoryRecord};
@@ -13,9 +13,10 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
-const WAITING_LIMIT: i64 = 100;
-const STOPPED_LIMIT: i64 = 50;
-const HISTORY_LIMIT: u32 = 200;
+const WAITING_LIMIT: i64 = 1000;
+const STOPPED_LIMIT: i64 = 128;
+const HISTORY_LIMIT: u32 = 256;
+const WAITING_PAGE_SIZE: i64 = 1000;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -66,29 +67,24 @@ pub async fn fetch_task_snapshot(app: &tauri::AppHandle) -> Result<TaskSnapshot,
     let (stat, active, waiting, stopped) = tokio::try_join!(
         client.get_global_stat(),
         client.tell_active(),
-        client.tell_waiting(0, WAITING_LIMIT),
+        fetch_waiting_tasks(&client, WAITING_LIMIT),
         client.tell_stopped(0, STOPPED_LIMIT),
     )?;
 
     let birth_records = load_task_births(app).await;
     let mut tasks = Vec::with_capacity(active.len() + waiting.len() + stopped.len());
-    tasks.extend(
-        active
-            .iter()
-            .map(|task| snapshot_item_from_task_with_births(task, &birth_records)),
-    );
-    tasks.extend(
-        waiting
-            .iter()
-            .map(|task| snapshot_item_from_task_with_births(task, &birth_records)),
-    );
-    tasks.extend(
-        stopped
-            .iter()
-            .map(|task| snapshot_item_from_task_with_births(task, &birth_records)),
-    );
+    let mut seen_gids = HashSet::new();
+    for task in active
+        .iter()
+        .chain(waiting.iter())
+        .chain(stopped.iter())
+    {
+        if !seen_gids.insert(task.gid.clone()) {
+            continue;
+        }
+        tasks.push(snapshot_item_from_task_with_births(task, &birth_records));
+    }
 
-    let seen_gids: HashSet<String> = tasks.iter().map(|task| task.gid.clone()).collect();
     for record in load_history_records(app).await {
         if seen_gids.contains(&record.gid) {
             continue;
@@ -168,6 +164,124 @@ async fn load_history_records(app: &tauri::AppHandle) -> Vec<HistoryRecord> {
     }
 }
 
+async fn fetch_waiting_tasks(client: &Aria2Client, max: i64) -> Result<Vec<Aria2Task>, AppError> {
+    let mut tasks = Vec::new();
+    let mut offset = 0i64;
+    loop {
+        let page = client
+            .tell_waiting(offset, WAITING_PAGE_SIZE)
+            .await?;
+        let page_len = page.len();
+        tasks.extend(page);
+        if page_len < WAITING_PAGE_SIZE as usize || tasks.len() as i64 >= max {
+            break;
+        }
+        offset += WAITING_PAGE_SIZE;
+    }
+    tasks.truncate(max as usize);
+    Ok(tasks)
+}
+
+fn completed_length_from_history_record(
+    record: &HistoryRecord,
+    total_length: u64,
+    status: &str,
+) -> u64 {
+    match status {
+        "complete" => total_length,
+        "active" | "waiting" | "paused" => parse_completed_length_meta(record.meta.as_deref())
+            .unwrap_or(0)
+            .min(total_length),
+        _ => 0,
+    }
+}
+
+fn parse_completed_length_meta(meta: Option<&str>) -> Option<u64> {
+    let value = serde_json::from_str::<serde_json::Value>(meta?).ok()?;
+    value
+        .get("completedLength")
+        .and_then(|entry| entry.as_str())
+        .and_then(|raw| raw.parse::<u64>().ok())
+}
+
+fn is_live_session_status(status: &str) -> bool {
+    matches!(status, "active" | "waiting" | "paused")
+}
+
+fn is_metadata_task(task: &Aria2Task) -> bool {
+    task.bittorrent.is_some()
+        && task
+            .bittorrent
+            .as_ref()
+            .and_then(|bt| bt.info.as_ref())
+            .is_none()
+        && task.following.is_none()
+}
+
+/// Upsert live aria2 session tasks into history so extension snapshots can
+/// surface RPC-pushed downloads even when the UI has not written history yet.
+pub async fn persist_live_session_tasks(app: &tauri::AppHandle, tasks: &[Aria2Task]) {
+    let Some(db_state) = app.try_state::<HistoryDbState>() else {
+        return;
+    };
+    let db = db_state.0.clone();
+    let now = chrono::Utc::now().to_rfc3339();
+
+    for task in tasks {
+        if !is_live_session_status(&task.status) || is_metadata_task(task) {
+            continue;
+        }
+
+        let gid = task.gid.clone();
+        let record = build_live_history_record(task, None);
+        let birth_at = record.added_at.clone().unwrap_or_else(|| now.clone());
+        let db = db.clone();
+        tokio::spawn(async move {
+            if let Err(e) = db.record_task_birth(&gid, &birth_at).await {
+                log::debug!("task_snapshot: task_birth write failed for {gid}: {e}");
+            }
+            if let Err(e) = db.add_record(&record).await {
+                log::debug!("task_snapshot: live history upsert failed for {gid}: {e}");
+            }
+        });
+    }
+}
+
+pub async fn fetch_waiting_tasks_for_monitor(
+    client: &Aria2Client,
+) -> Result<Vec<Aria2Task>, AppError> {
+    fetch_waiting_tasks(client, WAITING_LIMIT).await
+}
+
+pub fn build_live_history_record(task: &Aria2Task, added_at: Option<String>) -> HistoryRecord {
+    let total_length = parse_u64(&task.total_length) as i64;
+    let completed_length = parse_u64(&task.completed_length);
+    let uri = task
+        .files
+        .first()
+        .and_then(|file| file.uris.first())
+        .map(|entry| entry.uri.clone())
+        .filter(|uri| !uri.is_empty());
+    let meta = (completed_length > 0).then(|| {
+        serde_json::json!({ "completedLength": completed_length.to_string() }).to_string()
+    });
+
+    HistoryRecord {
+        id: None,
+        gid: task.gid.clone(),
+        name: extract_task_name(task),
+        uri,
+        dir: Some(task.dir.clone()),
+        total_length: Some(total_length),
+        status: task.status.clone(),
+        task_type: Some(task_type(task).to_string()),
+        added_at: added_at.or_else(|| Some(chrono::Utc::now().to_rfc3339())),
+        created_at: None,
+        completed_at: None,
+        meta,
+    }
+}
+
 pub fn resolve_history_target_path(record: &HistoryRecord) -> Option<String> {
     let name = record.name.trim();
     if name.is_empty() {
@@ -184,10 +298,7 @@ pub fn resolve_history_target_path(record: &HistoryRecord) -> Option<String> {
 fn snapshot_item_from_history_record(record: &HistoryRecord) -> TaskSnapshotItem {
     let total_length = record.total_length.unwrap_or(0).max(0) as u64;
     let status = record.status.clone();
-    let completed_length = match status.as_str() {
-        "complete" => total_length,
-        _ => 0,
-    };
+    let completed_length = completed_length_from_history_record(record, total_length, &status);
     let dir = record.dir.clone().unwrap_or_default();
     let target_path = resolve_history_target_path(record);
 
@@ -492,6 +603,38 @@ mod tests {
 
         let gids: Vec<&str> = items.iter().map(|item| item.gid.as_str()).collect();
         assert_eq!(gids, vec!["new", "old", "missing"]);
+    }
+
+    #[test]
+    fn history_record_snapshot_preserves_in_progress_bytes_from_meta() {
+        let item = snapshot_item_from_history_record(&HistoryRecord {
+            id: Some(2),
+            gid: "gid-rpc".to_string(),
+            name: "rpc-file.zip".to_string(),
+            uri: Some("https://example.com/file.zip".to_string()),
+            dir: Some("C:/Downloads".to_string()),
+            total_length: Some(1000),
+            status: "active".to_string(),
+            task_type: Some("uri".to_string()),
+            added_at: Some("2026-06-01T00:00:00Z".to_string()),
+            created_at: None,
+            completed_at: None,
+            meta: Some(r#"{"completedLength":"250"}"#.to_string()),
+        });
+
+        assert_eq!(item.status, "active");
+        assert_eq!(item.completed_length, 250);
+        assert_eq!(item.progress, Some(25.0));
+    }
+
+    #[test]
+    fn build_live_history_record_stores_progress_meta_for_active_tasks() {
+        let record = build_live_history_record(
+            &task("rpc", "active", "1000", "250", "100"),
+            Some("2026-06-01T00:00:00Z".to_string()),
+        );
+        assert_eq!(record.status, "active");
+        assert_eq!(record.meta.as_deref(), Some(r#"{"completedLength":"250"}"#));
     }
 
     #[test]

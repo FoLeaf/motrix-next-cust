@@ -17,6 +17,7 @@
 use super::notification::send_task_notification;
 use crate::aria2::types::Aria2Task;
 use crate::history::HistoryDbState;
+use crate::services::task_snapshot;
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
@@ -25,7 +26,7 @@ use tauri::Manager;
 use tokio::sync::watch;
 
 /// Maximum number of stopped tasks to scan per tick.
-const STOPPED_SLICE_LIMIT: i64 = 50;
+const STOPPED_SLICE_LIMIT: i64 = 128;
 
 /// Default polling interval in milliseconds.
 const DEFAULT_INTERVAL_MS: u64 = 2000;
@@ -578,11 +579,19 @@ async fn monitor_loop(
             }
         }
 
-        // Fetch active + stopped tasks
+        // Fetch active, waiting, and stopped tasks.
         let active = match aria2.tell_active().await {
             Ok(tasks) => tasks,
             Err(e) => {
                 log::debug!("task_monitor: tell_active failed: {e}");
+                continue;
+            }
+        };
+
+        let waiting = match task_snapshot::fetch_waiting_tasks_for_monitor(&aria2).await {
+            Ok(tasks) => tasks,
+            Err(e) => {
+                log::debug!("task_monitor: tell_waiting failed: {e}");
                 continue;
             }
         };
@@ -596,7 +605,10 @@ async fn monitor_loop(
         };
 
         let mut all = active;
+        all.extend(waiting);
         all.extend(stopped);
+
+        task_snapshot::persist_live_session_tasks(&app, &all).await;
 
         let initial_recent_birth_gids = if !notifier.initial_scan_done() {
             recent_task_birth_gids(&app, monitor_started_at).await
