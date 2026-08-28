@@ -6,14 +6,16 @@
 use crate::aria2::client::Aria2State;
 use crate::aria2::types::{Aria2File, Aria2Task};
 use crate::error::AppError;
-use crate::history::HistoryDbState;
+use crate::history::{HistoryDbState, HistoryRecord};
 use serde::Serialize;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
 const WAITING_LIMIT: i64 = 100;
 const STOPPED_LIMIT: i64 = 50;
+const HISTORY_LIMIT: u32 = 200;
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -85,6 +87,14 @@ pub async fn fetch_task_snapshot(app: &tauri::AppHandle) -> Result<TaskSnapshot,
             .iter()
             .map(|task| snapshot_item_from_task_with_births(task, &birth_records)),
     );
+
+    let seen_gids: HashSet<String> = tasks.iter().map(|task| task.gid.clone()).collect();
+    for record in load_history_records(app).await {
+        if seen_gids.contains(&record.gid) {
+            continue;
+        }
+        tasks.push(snapshot_item_from_history_record(&record));
+    }
     sort_items_by_added_at_desc(&mut tasks);
 
     let totals = TaskSnapshotTotals {
@@ -143,6 +153,65 @@ pub fn sort_items_by_added_at_desc(items: &mut [TaskSnapshotItem]) {
         parse_rfc3339_millis(b.added_at.as_deref())
             .cmp(&parse_rfc3339_millis(a.added_at.as_deref()))
     });
+}
+
+async fn load_history_records(app: &tauri::AppHandle) -> Vec<HistoryRecord> {
+    let Some(db_state) = app.try_state::<HistoryDbState>() else {
+        return Vec::new();
+    };
+    match db_state.0.get_records(None, Some(HISTORY_LIMIT)).await {
+        Ok(records) => records,
+        Err(e) => {
+            log::debug!("task_snapshot: history load failed: {e}");
+            Vec::new()
+        }
+    }
+}
+
+pub fn resolve_history_target_path(record: &HistoryRecord) -> Option<String> {
+    let name = record.name.trim();
+    if name.is_empty() {
+        return None;
+    }
+    let dir = record.dir.clone().unwrap_or_default();
+    if dir.is_empty() {
+        Some(name.to_string())
+    } else {
+        Some(join_path(&dir, name))
+    }
+}
+
+fn snapshot_item_from_history_record(record: &HistoryRecord) -> TaskSnapshotItem {
+    let total_length = record.total_length.unwrap_or(0).max(0) as u64;
+    let status = record.status.clone();
+    let completed_length = match status.as_str() {
+        "complete" => total_length,
+        _ => 0,
+    };
+    let dir = record.dir.clone().unwrap_or_default();
+    let target_path = resolve_history_target_path(record);
+
+    TaskSnapshotItem {
+        gid: record.gid.clone(),
+        added_at: record
+            .added_at
+            .clone()
+            .or_else(|| record.completed_at.clone()),
+        name: record.name.clone(),
+        status,
+        total_length,
+        completed_length,
+        progress: task_progress(total_length, completed_length, record.status.as_str()),
+        download_speed: 0,
+        upload_speed: 0,
+        eta_seconds: None,
+        dir,
+        target_path,
+        task_type: record
+            .task_type
+            .clone()
+            .unwrap_or_else(|| "uri".to_string()),
+    }
 }
 
 async fn load_task_births(app: &tauri::AppHandle) -> HashMap<String, String> {
@@ -423,6 +492,32 @@ mod tests {
 
         let gids: Vec<&str> = items.iter().map(|item| item.gid.as_str()).collect();
         assert_eq!(gids, vec!["new", "old", "missing"]);
+    }
+
+    #[test]
+    fn history_record_snapshot_marks_complete_tasks_as_finished() {
+        let item = snapshot_item_from_history_record(&HistoryRecord {
+            id: Some(1),
+            gid: "gid-history".to_string(),
+            name: "archive.zip".to_string(),
+            uri: None,
+            dir: Some("C:/Downloads".to_string()),
+            total_length: Some(1024),
+            status: "complete".to_string(),
+            task_type: Some("uri".to_string()),
+            added_at: Some("2026-06-01T00:00:00Z".to_string()),
+            created_at: None,
+            completed_at: Some("2026-06-01T01:00:00Z".to_string()),
+            meta: None,
+        });
+
+        assert_eq!(item.gid, "gid-history");
+        assert_eq!(item.status, "complete");
+        assert_eq!(item.progress, Some(100.0));
+        assert_eq!(
+            item.target_path.as_deref(),
+            Some("C:/Downloads/archive.zip")
+        );
     }
 
     #[test]

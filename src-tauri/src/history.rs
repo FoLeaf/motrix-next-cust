@@ -159,6 +159,19 @@ impl HistoryDb {
         }
     }
 
+    /// Look up a single history record by GID.
+    pub async fn get_record_by_gid(&self, gid: &str) -> Result<Option<HistoryRecord>, AppError> {
+        let conn = self.conn.lock().await;
+        let record = conn
+            .query_row(
+                "SELECT * FROM download_history WHERE gid = ?1",
+                params![gid],
+                Self::row_to_record,
+            )
+            .optional()?;
+        Ok(record)
+    }
+
     /// Remove a single record by GID.
     pub async fn remove_record(&self, gid: &str) -> Result<(), AppError> {
         let conn = self.conn.lock().await;

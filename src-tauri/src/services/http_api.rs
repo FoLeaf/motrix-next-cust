@@ -23,6 +23,7 @@ use crate::error::AppError;
 use crate::services::config::{RuntimeConfigState, DEFAULT_EXTENSION_API_PORT};
 use crate::services::external_input::{self, ExternalDownloadInput, ExternalRequestHeader};
 use crate::services::port_guard;
+use crate::history::{HistoryDbState, HistoryRecord};
 use crate::services::task_snapshot::{self, TaskSnapshot};
 use axum::{
     extract::{
@@ -115,6 +116,8 @@ pub struct ActionResponse {
 pub struct TaskActionRequest {
     pub gid: String,
     pub action: String,
+    #[serde(default)]
+    pub target_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -371,8 +374,10 @@ async fn handle_task_action(
         "pause" => aria2.0.force_pause(gid).await.map(|_| ()),
         "resume" => aria2.0.unpause(gid).await.map(|_| ()),
         "cancel" => cancel_task(&aria2, gid).await,
-        "open" => open_task_target(&ctx.app, &aria2, gid).await,
-        "showInFolder" => show_task_target_in_folder(&ctx.app, &aria2, gid).await,
+        "open" => open_task_target(&ctx.app, &aria2, gid, body.target_path.as_deref()).await,
+        "showInFolder" => {
+            show_task_target_in_folder(&ctx.app, &aria2, gid, body.target_path.as_deref()).await
+        }
         _ => return Err(StatusCode::BAD_REQUEST),
     };
 
@@ -505,22 +510,68 @@ async fn cancel_task(aria2: &tauri::State<'_, Aria2State>, gid: &str) -> Result<
     }
 }
 
+struct ResolvedTaskTarget {
+    target: String,
+    fallback: String,
+}
+
+async fn resolve_task_target_for_action(
+    app: &AppHandle,
+    aria2: &tauri::State<'_, Aria2State>,
+    gid: &str,
+    target_path_hint: Option<&str>,
+) -> Result<ResolvedTaskTarget, AppError> {
+    if let Ok(task) = aria2.0.tell_status(gid).await {
+        let target = task_snapshot::resolve_task_target_path(&task)
+            .ok_or_else(|| AppError::NotFound("Task target path unavailable".into()))?;
+        return Ok(ResolvedTaskTarget {
+            target,
+            fallback: task.dir.clone(),
+        });
+    }
+
+    if let Some(hint) = target_path_hint.map(str::trim).filter(|value| !value.is_empty()) {
+        return Ok(ResolvedTaskTarget {
+            target: hint.to_string(),
+            fallback: String::new(),
+        });
+    }
+
+    if let Some(record) = load_history_record_by_gid(app, gid).await {
+        if let Some(target) = task_snapshot::resolve_history_target_path(&record) {
+            return Ok(ResolvedTaskTarget {
+                target,
+                fallback: record.dir.clone().unwrap_or_default(),
+            });
+        }
+    }
+
+    Err(AppError::NotFound(format!("Task not found: {gid}")))
+}
+
+async fn load_history_record_by_gid(app: &AppHandle, gid: &str) -> Option<HistoryRecord> {
+    let db_state = app.try_state::<HistoryDbState>()?;
+    db_state.0.get_record_by_gid(gid).await.ok().flatten()
+}
+
+fn choose_existing_target_path(target: &str, fallback: &str) -> String {
+    if Path::new(target).exists() {
+        target.to_string()
+    } else if !fallback.trim().is_empty() {
+        fallback.to_string()
+    } else {
+        target.to_string()
+    }
+}
+
 async fn open_task_target(
     app: &AppHandle,
     aria2: &tauri::State<'_, Aria2State>,
     gid: &str,
+    target_path_hint: Option<&str>,
 ) -> Result<(), AppError> {
-    let task = aria2.0.tell_status(gid).await?;
-    let target = task_snapshot::resolve_task_target_path(&task)
-        .ok_or_else(|| AppError::NotFound("Task target path unavailable".into()))?;
-    let fallback = task.dir.clone();
-    let open_target = if Path::new(&target).exists() {
-        target
-    } else if !fallback.trim().is_empty() {
-        fallback
-    } else {
-        target
-    };
+    let resolved = resolve_task_target_for_action(app, aria2, gid, target_path_hint).await?;
+    let open_target = choose_existing_target_path(&resolved.target, &resolved.fallback);
     crate::commands::fs::open_path_normalized(app.clone(), open_target)
 }
 
@@ -528,18 +579,10 @@ async fn show_task_target_in_folder(
     app: &AppHandle,
     aria2: &tauri::State<'_, Aria2State>,
     gid: &str,
+    target_path_hint: Option<&str>,
 ) -> Result<(), AppError> {
-    let task = aria2.0.tell_status(gid).await?;
-    let target = task_snapshot::resolve_task_target_path(&task)
-        .ok_or_else(|| AppError::NotFound("Task target path unavailable".into()))?;
-    let fallback = task.dir.clone();
-    let show_target = if Path::new(&target).exists() {
-        target
-    } else if !fallback.trim().is_empty() {
-        fallback
-    } else {
-        target
-    };
+    let resolved = resolve_task_target_for_action(app, aria2, gid, target_path_hint).await?;
+    let show_target = choose_existing_target_path(&resolved.target, &resolved.fallback);
     if Path::new(&show_target).is_file() {
         crate::commands::fs::show_item_in_dir(show_target)
     } else {
